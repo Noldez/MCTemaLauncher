@@ -1,0 +1,30 @@
+name: Bug report
+description: Something in the launcher is broken
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Launcher version
+      description: Shown in the top bar (Build vX.Y.Z)
+      placeholder: "0.2.11"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: "Windows 11 24H2"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what happened instead
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console output
+      description: Settings -> console overlay, paste relevant lines
+      render: text

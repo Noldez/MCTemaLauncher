@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Download bundled JRE
+        run: npm run download-jre
+      - name: Build installer
+        run: npm run dist
+      - name: Checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem build/MCTemaLauncher-Setup-*.exe | ForEach-Object {
+            "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
+          } | Out-File -Encoding ascii build/SHA256SUMS.txt
+          Get-Content build/SHA256SUMS.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/MCTemaLauncher-Setup-*.exe
+            build/MCTemaLauncher-Setup-*.exe.blockmap
+            build/latest.yml
+            build/SHA256SUMS.txt
