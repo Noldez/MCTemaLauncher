@@ -5,7 +5,7 @@ const net = require('net');
 const https = require('https');
 const crypto = require('crypto');
 const { pathToFileURL } = require('url');
-const { Client } = require('minecraft-launcher-core');
+const { Client } = require('./lib/mclc');
 const { writeVarInt, readVarInt, offlineUUID } = require('./lib/protocol');
 const { autoUpdater } = require('electron-updater');
 
