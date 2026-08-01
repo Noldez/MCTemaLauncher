@@ -13,8 +13,8 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
           cache: npm
@@ -30,10 +30,14 @@ jobs:
             "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
           } | Out-File -Encoding ascii build/SHA256SUMS.txt
           Get-Content build/SHA256SUMS.txt
-      - uses: actions/attest-build-provenance@v2
+      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        id: attest
         with:
           subject-path: build/MCTemaLauncher-Setup-*.exe
-      - uses: softprops/action-gh-release@v3
+      - name: Bundle attestation
+        shell: pwsh
+        run: Copy-Item "${{ steps.attest.outputs.bundle-path }}" build/MCTemaLauncher-Setup.intoto.jsonl
+      - uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
         with:
           generate_release_notes: true
           files: |
@@ -41,3 +45,4 @@ jobs:
             build/MCTemaLauncher-Setup-*.exe.blockmap
             build/latest.yml
             build/SHA256SUMS.txt
+            build/MCTemaLauncher-Setup.intoto.jsonl
