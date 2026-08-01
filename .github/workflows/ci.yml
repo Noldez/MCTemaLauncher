@@ -19,6 +19,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm test
       - name: Syntax check
         run: |
           for f in main.js preload.js toast-preload.js renderer/renderer.js renderer/toast.js renderer/views/*.js; do

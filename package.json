@@ -8,7 +8,8 @@
   "scripts": {
     "start": "electron .",
     "download-jre": "powershell -ExecutionPolicy Bypass -File scripts/download-jre.ps1",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "test": "node --test"
   },
   "dependencies": {
     "@xhayper/discord-rpc": "^1.3.4",
@@ -17,7 +18,8 @@
   },
   "devDependencies": {
     "electron": "^43.2.0",
-    "electron-builder": "^26.15.3"
+    "electron-builder": "^26.15.3",
+    "fast-check": "^4.9.0"
   },
   "build": {
     "appId": "lt.mctema.launcher",
@@ -31,7 +33,8 @@
       "preload.js",
       "renderer/**/*",
       "assets/**/*",
-      "!assets/jre/**"
+      "!assets/jre/**",
+      "lib/**/*"
     ],
     "extraResources": [
       {

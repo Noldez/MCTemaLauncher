@@ -6,6 +6,7 @@ const https = require('https');
 const crypto = require('crypto');
 const { pathToFileURL } = require('url');
 const { Client } = require('minecraft-launcher-core');
+const { writeVarInt, readVarInt, offlineUUID } = require('./lib/protocol');
 const { autoUpdater } = require('electron-updater');
 
 const SERVER = { host: 'play.mctema.lt', port: 25565 };
@@ -331,16 +332,6 @@ function sha256File(p) {
   return crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
 }
 
-function offlineUUID(username) {
-  const hash = crypto.createHash('md5')
-    .update(`OfflinePlayer:${username}`, 'utf8')
-    .digest();
-  hash[6] = (hash[6] & 0x0f) | 0x30;
-  hash[8] = (hash[8] & 0x3f) | 0x80;
-  const h = hash.toString('hex');
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
-}
-
 function resolveJava() {
   const exe = process.platform === 'win32' ? 'java.exe' : 'java';
   const candidates = [
@@ -608,26 +599,6 @@ ipcMain.handle('app:installUpdate', () => {
   return true;
 });
 
-function writeVarInt(value) {
-  const bytes = [];
-  do {
-    let tmp = value & 0x7f;
-    value >>>= 7;
-    if (value !== 0) tmp |= 0x80;
-    bytes.push(tmp);
-  } while (value !== 0);
-  return Buffer.from(bytes);
-}
-function readVarInt(buf, offset) {
-  let value = 0, size = 0, b;
-  do {
-    if (offset + size >= buf.length) return null;
-    b = buf[offset + size];
-    value |= (b & 0x7f) << (7 * size);
-    size++;
-  } while (b & 0x80);
-  return { value, size };
-}
 function mcStatus(host, port, timeout = 4000) {
   return new Promise((resolve) => {
     let done = false;
