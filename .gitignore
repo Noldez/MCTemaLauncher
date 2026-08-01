@@ -3,3 +3,4 @@ build/
 assets/jre/
 *.log
 docs/
+assets/jre-linux/

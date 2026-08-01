@@ -457,7 +457,7 @@ function createWindow() {
     maximizable: true,
     fullscreenable: false,
     frame: false,
-    icon: path.join(__dirname, 'assets', 'icon.ico'),
+    icon: path.join(__dirname, 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
     backgroundColor: '#0a0a0c',
     show: false,
     webPreferences: {
