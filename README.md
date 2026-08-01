@@ -11,6 +11,7 @@ Official desktop launcher for the [MC Tema](https://mctema.lt) Minecraft server 
 [![Release](https://img.shields.io/github/v/release/Noldez/MCTemaLauncher?label=release)](https://github.com/Noldez/MCTemaLauncher/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Noldez/MCTemaLauncher/total?label=downloads&color=2ea44f)](https://github.com/Noldez/MCTemaLauncher/releases)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Noldez/MCTemaLauncher/badge)](https://scorecard.dev/viewer/?uri=github.com/Noldez/MCTemaLauncher)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13924/badge)](https://www.bestpractices.dev/projects/13924)
 [![License](https://img.shields.io/github/license/Noldez/MCTemaLauncher)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows-0078d4)](https://mctema.lt)
 
