@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; img-src 'self' https://mc-heads.net; script-src 'self'; font-src 'self'">
+  <style>
+    @font-face { font-family: 'Poppins'; font-weight: 400; src: url('fonts/poppins-400.woff2') format('woff2'); }
+    @font-face { font-family: 'Poppins'; font-weight: 600; src: url('fonts/poppins-600.woff2') format('woff2'); }
+    * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+    html, body { background: transparent; overflow: hidden; }
+    .toast {
+      display: flex; align-items: center; gap: 11px;
+      width: 344px; height: 64px; margin: 8px; padding: 0 16px;
+      background: #141418;
+      border: 1px solid rgba(255, 255, 255, .13);
+      border-radius: 14px;
+      box-shadow: 0 18px 44px rgba(0, 0, 0, .6);
+      font-family: 'Poppins', 'Segoe UI', sans-serif; cursor: pointer;
+      animation: slidein .28s cubic-bezier(.2, .8, .3, 1) both;
+      position: relative;
+    }
+    .toast:hover { background: #17171b; }
+    @keyframes slidein { from { transform: translateX(120%); opacity: 0; } to { transform: none; opacity: 1; } }
+    .toast.out { animation: slideout .22s ease both; }
+    @keyframes slideout { to { transform: translateX(120%); opacity: 0; } }
+    .av { width: 30px; height: 30px; border-radius: 5px; flex: none; image-rendering: pixelated; }
+    .av.logo { image-rendering: auto; }
+    .tx { min-width: 0; flex: 1; }
+    .tx b { display: flex; align-items: center; gap: 6px; color: #f2f2f4; font-size: 13px;
+      font-weight: 600; line-height: 1.25; }
+    .tx b::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #4ade80; flex: none; }
+    .tx span { display: block; color: #8b8b93; font-size: 11.5px; margin-top: 2px; font-weight: 400;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .x { position: absolute; right: 6px; top: 6px; width: 20px; height: 20px; border: 0;
+      background: none; color: #5c5c63; font-size: 11px; cursor: pointer; border-radius: 6px;
+      display: none; align-items: center; justify-content: center; }
+    .toast:hover .x { display: flex; }
+    .x:hover { color: #f2f2f4; background: rgba(255, 255, 255, .06); }
+  </style>
+</head>
+<body>
+  <div class="toast" id="t">
+    <img class="av" id="av" alt="">
+    <div class="tx"><b id="title"></b><span id="body"></span></div>
+    <button class="x" id="x">&#10005;</button>
+  </div>
+  <script src="toast.js"></script>
+</body>
+</html>

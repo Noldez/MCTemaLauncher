@@ -1,0 +1,45 @@
+{
+  "name": "mctema-launcher",
+  "version": "0.2.11",
+  "description": "MC Tema Minecraft launcher - offline mode, auto-connect to play.mctema.lt (1.21.11)",
+  "main": "main.js",
+  "author": "ただし (Discord: noldez)",
+  "license": "GPL-3.0-only",
+  "scripts": {
+    "start": "electron .",
+    "download-jre": "powershell -ExecutionPolicy Bypass -File scripts/download-jre.ps1",
+    "dist": "electron-builder"
+  },
+  "dependencies": {
+    "@xhayper/discord-rpc": "^1.3.4",
+    "electron-updater": "^6.8.9",
+    "minecraft-launcher-core": "^3.18.2"
+  },
+  "devDependencies": {
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "lt.mctema.launcher",
+    "productName": "MC Tema Launcher",
+    "directories": { "output": "build", "buildResources": "buildres" },
+    "files": ["main.js", "preload.js", "renderer/**/*", "assets/**/*", "!assets/jre/**"],
+    "extraResources": [
+      { "from": "assets/jre", "to": "jre" },
+      { "from": "mods", "to": "mods" }
+    ],
+    "copyright": "MC Tema - Sukūrė ただし (Discord: noldez)",
+    "win": { "target": "nsis", "icon": "assets/icon.ico" },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "include": "installer.nsh",
+      "installerSidebar": "sidebar.bmp",
+      "uninstallerSidebar": "sidebar.bmp",
+      "installerHeader": "header.bmp"
+    },
+    "publish": [{ "provider": "generic", "url": "https://mctema.lt/updates/", "channel": "latest" }],
+    "artifactName": "MCTemaLauncher-Setup-${version}.${ext}"
+  }
+}

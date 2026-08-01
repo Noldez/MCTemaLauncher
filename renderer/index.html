@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; img-src 'self' data: file: https://mc-heads.net https://mctema.lt https://cdn.modrinth.com; script-src 'self'; font-src 'self'">
+  <title>MC Tema Launcher</title>
+  <link rel="stylesheet" href="fa/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="tb-brand">
+      <img src="logo-64.png" alt="MC Tema" class="tb-logo">
+      <span class="tb-name">MC Tema</span>
+      <span class="tb-div"></span>
+      <span class="tb-build">Build v<span id="version">-</span></span>
+      <span class="beta-tag">BETA</span>
+      <span class="tb-joke">Jeigu radai bug'ą - tai feature. <em>- ただし</em></span>
+      <span class="tb-div"></span>
+      <span class="tb-online"><i id="online-dot" class="dot off"></i><b id="online-count">-</b> Online</span>
+    </div>
+    <div class="tb-drag"></div>
+    <div class="tb-controls">
+      <button id="tb-update" class="tb-update hidden"><i class="fa-solid fa-rotate"></i> ATNAUJINTI</button>
+      <button id="rail-notif" class="tb-bell" title="Pranešimai"><i class="fa-regular fa-bell"></i><span id="tb-bell-n" class="tb-bell-n hidden"></span></button>
+      <button id="btn-min" title="Sumažinti"><i class="fa-solid fa-minus"></i></button>
+      <button id="btn-max" title="Padidinti"><i class="fa-regular fa-square"></i></button>
+      <button id="btn-close" class="tb-x" title="Uždaryti"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+  </header>
+
+  <div class="app">
+    <nav class="rail">
+      <img src="logo.png" class="rail-logo" alt="">
+      <span class="rail-div"></span>
+      <button class="rail-btn active" data-view="home" title="Pagrindinis"><i class="fa-solid fa-house"></i></button>
+      <button class="rail-btn" data-view="locker" title="Spinta"><i class="fa-solid fa-user"></i></button>
+      <span class="rail-div"></span>
+      <button class="rail-btn" data-view="relay" title="Pokalbiai"><i class="fa-regular fa-comment"></i></button>
+      <button class="rail-btn" data-view="mods" title="Modai"><i class="fa-solid fa-layer-group"></i></button>
+      <button class="rail-btn" data-view="gallery" title="Galerija"><i class="fa-solid fa-crop-simple"></i></button>
+      <span class="rail-spacer"></span>
+      <button class="rail-btn" data-url="https://mctema.lt/parduotuve" title="Parduotuvė"><i class="fa-solid fa-cart-shopping"></i></button>
+      <button class="rail-btn" data-view="settings" title="Nustatymai"><i class="fa-solid fa-gear"></i></button>
+    </nav>
+
+    <main class="content">
+      <section class="view active" id="view-home">
+        <div class="home-grid">
+          <div class="home-main">
+            <div class="hero">
+              <div class="hero-art"></div>
+              <canvas id="hero-fx" class="hero-fx"></canvas>
+              <div class="hero-inner">
+                <div class="hero-flex">
+                  <div class="hero-left">
+                    <div class="hero-stats">
+                      <div>Paskutinį kartą žaista: <b id="stat-last">-</b></div>
+                      <div>Iš viso žaista: <b id="stat-total">-</b></div>
+                    </div>
+                    <div class="hero-row">
+                      <div class="launch-block">
+                        <button id="btn-play" class="launch">
+                          <span class="launch-word">LAUNCH</span>
+                          <span class="launch-ver">Fabric <i class="fa-solid fa-feather"></i> 1.21.11</span>
+                        </button>
+                        <div class="launch-sub"><i class="fa-solid fa-server"></i> JUNGIASI TIESIAI Į PLAY.MCTEMA.LT</div>
+                        <div id="launch-progress" class="launch-progress hidden">
+                          <div class="lp-track"><div id="lp-fill" class="lp-fill"></div></div>
+                          <div id="lp-text" class="lp-text"></div>
+                        </div>
+                        <button class="profile-card" id="profile-play">
+                          <span class="pc-ic-box"><img src="logo-64.png" alt=""></span>
+                          <div><b>MC Tema Survival</b><span>Fabric 1.21.11</span></div>
+                        </button>
+                        <div class="social-row">
+                          <button class="soc s-yt" data-url="https://www.youtube.com/@mctema" title="YouTube"><i class="fa-brands fa-youtube"></i></button>
+                          <button class="soc s-tt" data-url="https://www.tiktok.com/@mctema" title="TikTok"><i class="fa-brands fa-tiktok"></i></button>
+                          <button class="soc s-tw" data-url="https://www.twitch.tv/mctema" title="Twitch"><i class="fa-brands fa-twitch"></i></button>
+                          <button class="soc s-dc" data-url="https://discord.gg/qCJCUuTuFj" title="Discord"><i class="fa-brands fa-discord"></i></button>
+                          <span class="soc-count hidden" id="disc-count"><i class="dot on"></i><b id="disc-n">0</b>&nbsp;Discord'e</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="hero-sep"></div>
+                  <div class="hero-char">
+                    <div class="callout c1"><div class="co-text"><b>12</b><span>lygis</span></div><i class="co-line"></i></div>
+                    <div class="callout c2"><div class="co-text"><b>2 450</b><span>auksiniai</span></div><i class="co-line"></i></div>
+                    <div class="callout c3"><div class="co-text"><b>#7</b><span>topuose</span></div><i class="co-line"></i></div>
+                    <div class="char-stage">
+                      <div class="char-platform"><i class="pf-1"></i><i class="pf-2"></i><i class="pf-3"></i></div>
+                      <canvas id="home-char"></canvas>
+                      <div class="char-tag"><b class="tag-rank">ADMIN</b><span id="greet-nick">-</span></div>
+                    </div>
+                    <button class="char-wardrobe" data-view="locker"><i class="fa-solid fa-shirt"></i> Keisti skiną</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="home-panels">
+              <div class="sect-label nf">DABAR TRANSLIUOJA</div>
+              <div class="streams" id="streams-row"></div>
+              <div class="sect-label nf">NAUJIENOS</div>
+              <div class="news-grid">
+                <article class="news-card nc-a1">
+                  <div class="nc-content">
+                    <div class="nc-title">Launcher v0.2.11</div>
+                    <div class="nc-under">Naujas dizainas &middot; Galerija &middot; Spinta &middot; Draugų sąrašas</div>
+                    <button class="nc-more" data-view="settings">PLAČIAU</button>
+                  </div>
+                </article>
+                <article class="news-card nc-a2">
+                  <div class="nc-content">
+                    <div class="nc-title">Startas 08.15</div>
+                    <div class="nc-under" id="news-count">Iki serverio starto: -</div>
+                    <button class="nc-more" data-url="https://mctema.lt">MCTEMA.LT</button>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </div>
+          <aside class="friends" id="friends-panel">
+            <div class="fr-head">
+              <div class="fr-tabs"><button class="fr-tab active" data-tab="friends">Friends</button><span class="fr-sep">|</span><button class="fr-tab" data-tab="requests">Requests</button></div>
+              <div class="fr-search">
+                <label class="fr-find"><i class="fa-solid fa-magnifying-glass"></i><input id="fr-input" placeholder="Rask žaidėją..." maxlength="16" spellcheck="false"></label>
+                <button id="fr-add" title="Pridėti draugą"><i class="fa-solid fa-user-plus"></i></button>
+              </div>
+            </div>
+            <div class="fr-body" id="fr-body"></div>
+          </aside>
+        </div>
+      </section>
+      <section class="view" id="view-relay">
+        <div class="relay">
+          <aside class="rl-inbox">
+            <h2>MC Tema Relay</h2>
+            <div class="rl-search"><label class="fr-find"><i class="fa-solid fa-magnifying-glass"></i><input id="rl-search-inp" placeholder="Ieškoti..." maxlength="16" spellcheck="false"></label><button class="rl-new" id="rl-new" title="Nauja žinutė"><i class="fa-regular fa-square-plus"></i></button></div>
+            <div id="rl-list" class="rl-list"></div>
+          </aside>
+          <section class="rl-chat" id="rl-chat">
+            <div class="rl-empty"><i class="fa-regular fa-comments"></i><b>Pasirink pokalbį</b><span>Spausk draugą kairėje ir rašyk - žinutės keliauja per mctema.lt.</span></div>
+          </section>
+        </div>
+      </section>
+      <section class="view" id="view-gallery">
+        <div class="gal">
+          <div class="gal-main">
+            <div class="gal-head">
+              <h2 class="pg-title">GALERIJA</h2>
+              <div class="gal-tabs"><button class="gt on" data-g="mine">Mano</button><span class="fr-sep">|</span><button class="gt" data-g="comm">Bendruomenės</button></div>
+              <label class="fr-find gal-search"><i class="fa-solid fa-magnifying-glass"></i><input id="gal-q" placeholder="Ieškoti galerijoje..."></label>
+              <button class="ghost" id="gal-folder" title="Atidaryti aplanką"><i class="fa-regular fa-folder-open"></i></button>
+            </div>
+            <div id="gal-grid" class="gal-grid"></div>
+            <div id="comm-grid" class="comm-gallery hidden"></div>
+          </div>
+          <aside class="gal-side hidden" id="comm-side">
+            <div class="gs-label">Žaidėjas</div>
+            <label class="fr-find"><i class="fa-solid fa-magnifying-glass"></i><input id="comm-q" placeholder="Rask žaidėją..."></label>
+            <div id="comm-players" class="comm-players"></div>
+            <div class="gs-label">Kategorijos</div>
+            <div class="seg seg-col" id="comm-cats"></div>
+          </aside>
+          <aside class="gal-side" id="mine-side">
+            <div class="gs-label">Rodymas</div>
+            <div class="seg" id="gal-view"><button class="on" data-v="grid"><i class="fa-solid fa-table-cells"></i> Tinklelis</button><button data-v="list"><i class="fa-solid fa-list"></i> Sąrašas</button></div>
+            <div class="gs-label">Rikiavimas</div>
+            <div class="seg" id="gal-sort"><button class="on" data-s="new">Naujausi</button><button data-s="old">Seniausi</button><button data-s="size">Dydis</button></div>
+            <div class="gs-label">Data</div>
+            <div id="gal-cal" class="gal-cal"></div>
+          </aside>
+        </div>
+        <div id="gal-light" class="lightbox hidden"></div>
+      </section>
+      <section class="view" id="view-locker">
+        <div class="locker">
+          <h2 class="pg-title">SPINTA</h2>
+          <div class="lk-top">
+            <div class="lk-col">
+              <div class="sect-label">DABARTINIS SKINAS</div>
+              <div class="lk-viewer"><canvas id="lk-canvas"></canvas><div id="lk-viewer-hint" class="lk-hint">Įkelk skiną, kad matytum jį čia</div></div>
+            </div>
+            <div class="lk-col">
+              <div class="sect-label">ĮKELTI SKINĄ</div>
+              <label class="lk-drop" id="lk-drop"><i class="fa-solid fa-plus"></i><span>Tempk failą arba spausk</span><input id="lk-file" type="file" accept="image/png" hidden></label>
+              <div class="sect-label">CAPES</div>
+              <div class="lk-capes"><div class="cape"></div><div class="cape c2"></div><div class="cape c3"></div><div class="cape c4"></div></div>
+              <p class="lk-note">Skinai kol kas matomi tik launcheryje - serveryje atsiras vėliau.</p>
+            </div>
+          </div>
+          <div class="sect-label">MĖGSTAMIAUSI</div>
+          <div id="lk-favs" class="lk-row"></div>
+          <div class="sect-label">NAUJAUSI</div>
+          <div id="lk-latest" class="lk-row"></div>
+        </div>
+        <div id="lk-modal" class="lk-modal hidden"></div>
+      </section>
+      <section class="view" id="view-mods">
+        <div class="modsv">
+          <div class="mods-head">
+            <label class="fr-find mods-search"><i class="fa-solid fa-magnifying-glass"></i><input id="mod-q" placeholder="Rask modą..."></label>
+            <button class="mods-hbtn green" title="Atnaujinti sąrašą" id="mods-refresh"><i class="fa-solid fa-rotate"></i></button>
+            <button class="mods-hbtn" title="Aplankas" id="mods-folder"><i class="fa-solid fa-folder-open"></i></button>
+          </div>
+          <div class="mods-count" id="mods-count">0 modų įkelta</div>
+
+          <div class="sugg-line">
+            <span class="sugg-label"><i class="fa-solid fa-thumbtack"></i> Pasirenkami modai</span>
+            <div class="sugg-strip" id="mods-sugg"></div>
+          </div>
+
+          <div class="ms-card drop" id="mods-drop">
+            <span class="ms-plus dashed"><i class="fa-solid fa-plus"></i></span>
+            <div><b>3rd party modai</b><span>Tempk .jar failus čia, naršyk, arba ieškok Modrinth per paiešką viršuje.</span></div>
+            <span class="ms-sync">Visi modai patikrinami SHA-256<br><em>1.21.11 Fabric</em></span>
+            <input id="mods-file" type="file" accept=".jar" multiple hidden>
+          </div>
+          <div id="mods-installed"></div>
+          <div id="mods-mr"></div>
+        </div>
+      </section>
+      <section class="view" id="view-settings">
+        <div class="setv">
+          <div class="adv-head">
+            <span class="ms-ic big"><i class="fa-solid fa-gear"></i></span>
+            <div>
+              <h2 class="adv-title">Nustatymai</h2>
+              <p class="adv-warn"><i class="fa-solid fa-triangle-exclamation"></i> Atsargiai - kai kurių nustatymų keitimas gali sukelti žaidimo nestabilumą.</p>
+            </div>
+            <div class="adv-side">Paskyra: <b id="set-account">-</b><button id="set-logout" class="adv-link">Atsijungti</button></div>
+          </div>
+
+          <div class="adv-row">
+            <span class="ms-ic"><i class="fa-solid fa-expand"></i></span>
+            <div class="adv-main">
+              <b>Žaidimo raiška</b>
+              <span>Lango dydis ir pilno ekrano režimas paleidžiant.</span>
+              <div class="adv-controls">
+                <label class="wh">W <input id="set-resw" type="number" min="640" max="7680" step="1"></label>
+                <label class="wh">H <input id="set-resh" type="number" min="480" max="4320" step="1"></label>
+                <label class="adv-check">Pilnas ekranas <button id="set-fs" class="mr-check"><i class="fa-solid fa-check"></i></button></label>
+                <span class="chipset">
+                  <button class="chip" data-res="1280x720">720p</button>
+                  <button class="chip" data-res="1920x1080">1080p</button>
+                  <button class="chip" data-res="2560x1440">1440p</button>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="adv-row">
+            <span class="ms-ic"><i class="fa-solid fa-memory"></i></span>
+            <div class="adv-main">
+              <b>Atmintis</b>
+              <span>Kiek RAM skirti žaidimui. Rekomenduojama 4-6 GB.</span>
+              <div class="adv-controls">
+                <span class="ram-chip"><b id="set-ram-val">4 GB</b><em>/ 16 GB</em></span>
+                <input id="set-ram" type="range" min="2" max="16" step="1" class="adv-range">
+              </div>
+            </div>
+          </div>
+
+          <div class="adv-row">
+            <span class="ms-ic"><i class="fa-solid fa-code"></i></span>
+            <div class="adv-main">
+              <b>JVM argumentai</b>
+              <span>Papildomi Java parametrai pažengusiems. Netinkami argumentai neleis paleisti žaidimo.</span>
+              <div class="adv-controls stack">
+                <label class="adv-check">Enabled <button id="set-jvm-on" class="mr-check"><i class="fa-solid fa-check"></i></button></label>
+                <input id="set-jvm" class="adv-input" placeholder="-XX:+UseG1GC -XX:MaxGCPauseMillis=40" spellcheck="false" disabled>
+              </div>
+            </div>
+          </div>
+
+          <div class="adv-row">
+            <span class="ms-ic"><i class="fa-solid fa-eye-slash"></i></span>
+            <div class="adv-main">
+              <b>Slėpti launcher žaidžiant</b>
+              <span>Launcher pasislepia, kol žaidimas veikia.</span>
+            </div>
+            <label class="adv-check side">Enabled <button id="set-hide" class="mr-check"><i class="fa-solid fa-check"></i></button></label>
+          </div>
+
+          <div class="adv-row">
+            <span class="ms-ic"><i class="fa-regular fa-bell"></i></span>
+            <div class="adv-main">
+              <b>Pranešimų pop-up</b>
+              <span>Rodyti pranešimus ekrano kampe apie naujas žinutes ir draugų prašymus.</span>
+            </div>
+            <label class="adv-check side">Enabled <button id="set-toasts" class="mr-check"><i class="fa-solid fa-check"></i></button></label>
+          </div>
+
+          <div class="adv-row dim">
+            <span class="ms-ic"><i class="fa-brands fa-discord"></i></span>
+            <div class="adv-main">
+              <b>Discord Rich Presence</b>
+              <span>Rodyti MC Tema tavo Discord profilyje. Netrukus.</span>
+            </div>
+            <label class="adv-check side">Enabled <button class="mr-check" disabled><i class="fa-solid fa-check"></i></button></label>
+          </div>
+
+          <div class="adv-row">
+            <span class="ms-ic"><i class="fa-solid fa-cube"></i></span>
+            <div class="adv-main">
+              <b>Versija</b>
+              <span>Fabric 1.21.11 · Launcher v<span id="set-ver">-</span> · Sukūrė <span class="credit" title="Discord: noldez">ただし</span></span>
+            </div>
+            <div class="adv-controls side">
+              <button id="set-folder" class="ghost"><i class="fa-regular fa-folder-open"></i> Aplankas</button>
+              <button id="set-console" class="ghost"><i class="fa-solid fa-terminal"></i> Console</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- boot splash -->
+  <div id="boot-splash" class="boot-splash">
+    <img src="logo.png" alt="MC Tema" class="bs-logo">
+    <div class="bs-bar"><span></span></div>
+    <div class="bs-text">KRAUNAMA</div>
+  </div>
+
+  <!-- login gate -->
+  <div id="login-gate" class="login-gate hidden">
+    <div class="lg-left">
+      <img src="logo.png" alt="" class="lg-logo">
+      <div class="lg-title">MC <b>Tema</b> <span class="beta-tag">BETA</span></div>
+      <form id="lg-form" class="lg-form" autocomplete="off">
+        <label class="fr-find lg-field"><i class="fa-solid fa-user"></i><input id="lg-user" placeholder="Slapyvardis" maxlength="16" spellcheck="false" autocomplete="username"></label>
+        <label class="fr-find lg-field"><i class="fa-solid fa-lock"></i><input id="lg-pass" type="password" placeholder="Slaptažodis" maxlength="128" autocomplete="current-password"></label>
+        <div id="lg-error" class="lg-error"></div>
+        <button id="lg-submit" class="lg-submit" type="submit">Prisijungti</button>
+      </form>
+      <p class="lg-note"><i class="fa-solid fa-shield-halved"></i> Saugus prisijungimas per mctema.lt</p>
+      <p class="lg-joke"><b>BETA</b> · Jeigu radai bug'ą - tai feature. <em>- ただし</em></p>
+      <div class="lg-socials">
+        <button class="soc s-dc" data-url="https://discord.gg/qCJCUuTuFj" title="Discord"><i class="fa-brands fa-discord"></i></button>
+        <button class="soc s-yt" data-url="https://www.youtube.com/@mctema" title="YouTube"><i class="fa-brands fa-youtube"></i></button>
+        <button class="soc s-tt" data-url="https://www.tiktok.com/@mctema" title="TikTok"><i class="fa-brands fa-tiktok"></i></button>
+        <button class="soc s-tw" data-url="https://www.twitch.tv/mctema" title="Twitch"><i class="fa-brands fa-twitch"></i></button>
+      </div>
+      <div class="lg-links">
+        <button data-url="https://mctema.lt/privatumas">Privatumo politika</button><i>·</i>
+        <button data-url="https://mctema.lt/taisykles">Taisyklės</button><i>·</i>
+        <button data-url="https://discord.gg/qCJCUuTuFj">Pagalba</button>
+      </div>
+    </div>
+    <div class="lg-right">
+      <div class="lg-neon"></div>
+      <img src="logo.png" alt="" class="lg-art-logo">
+    </div>
+  </div>
+
+  <div id="fr-menu" class="ctx hidden"></div>
+  <div id="notif-pop" class="notif-pop hidden"></div>
+  <div id="console-overlay" class="console-overlay hidden">
+    <div class="co-box">
+      <div class="co-head"><b>Console</b><div><button id="co-copy" class="ghost"><i class="fa-solid fa-copy"></i> Kopijuoti</button><button id="co-close" class="ghost"><i class="fa-solid fa-xmark"></i></button></div></div>
+      <pre id="co-out"></pre>
+    </div>
+  </div>
+
+  <script src="vendor/skinview3d.bundle.js"></script>
+  <script src="renderer.js"></script>
+  <script src="views/home.js"></script>
+  <script src="views/friends.js"></script>
+  <script src="views/relay.js"></script>
+  <script src="views/gallery.js"></script>
+  <script src="views/locker.js"></script>
+  <script src="views/mods.js"></script>
+  <script src="views/settings.js"></script>
+</body>
+</html>
