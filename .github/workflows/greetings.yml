@@ -1,0 +1,17 @@
+name: Greetings
+
+on: [issues, pull_request_target]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  greeting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/first-interaction@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-message: 'Thanks for the report! Staff will take a look - for faster help you can also ping us on the [MC Tema Discord](https://discord.gg/mctema).'
+          pr-message: 'Thanks for the contribution! Please make sure CI passes and the checklist in the PR description is done.'

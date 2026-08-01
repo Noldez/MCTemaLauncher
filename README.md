@@ -8,6 +8,9 @@ Official desktop launcher for the [MC Tema](https://mctema.lt) Minecraft server 
 
 [![CI](https://img.shields.io/github/actions/workflow/status/Noldez/MCTemaLauncher/ci.yml?branch=main&label=CI)](https://github.com/Noldez/MCTemaLauncher/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/Noldez/MCTemaLauncher/codeql.yml?branch=main&label=CodeQL)](https://github.com/Noldez/MCTemaLauncher/actions/workflows/codeql.yml)
+[![Release](https://img.shields.io/github/v/release/Noldez/MCTemaLauncher?label=release)](https://github.com/Noldez/MCTemaLauncher/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Noldez/MCTemaLauncher/total?label=downloads)](https://github.com/Noldez/MCTemaLauncher/releases)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Noldez/MCTemaLauncher/badge)](https://scorecard.dev/viewer/?uri=github.com/Noldez/MCTemaLauncher)
 [![License](https://img.shields.io/github/license/Noldez/MCTemaLauncher)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows-0078d4)](https://mctema.lt)
 

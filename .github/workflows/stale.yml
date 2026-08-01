@@ -1,0 +1,21 @@
+name: Stale issues
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          days-before-stale: 45
+          days-before-close: 14
+          stale-issue-message: 'No activity for 45 days - closing in 14 days unless there is an update.'
+          stale-pr-message: 'No activity for 45 days - closing in 14 days unless there is an update.'
+          exempt-issue-labels: 'pinned,security'
