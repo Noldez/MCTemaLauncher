@@ -6,6 +6,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   build:
@@ -28,6 +30,9 @@ jobs:
             "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
           } | Out-File -Encoding ascii build/SHA256SUMS.txt
           Get-Content build/SHA256SUMS.txt
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: build/MCTemaLauncher-Setup-*.exe
       - uses: softprops/action-gh-release@v3
         with:
           files: |
