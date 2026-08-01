@@ -16,6 +16,7 @@ npm start
 - The launcher must only talk to `mctema.lt`, official Mojang/Fabric/Modrinth endpoints and `mc-heads.net`. PRs adding other network calls will not be accepted.
 - Match the existing code style: plain CommonJS, no frameworks, minimal comments.
 - One change per pull request, with a short description of what and why.
+- New functionality should come with automated tests (npm test runs in CI; see test/ for examples).
 - All changes land via pull request with passing CI - direct pushes to main are blocked.
 
 ## Bugs and ideas
