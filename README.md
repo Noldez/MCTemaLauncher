@@ -30,6 +30,19 @@ Official desktop launcher for the [MC Tema](https://mctema.lt) Minecraft server 
 - **Optional mods** - Sodium, Lithium, Iris and more, installed from Modrinth with checksum verification on every launch
 - **Automatic updates** - silent download, one-click install
 
+## Verify your download
+
+The official installer from [mctema.lt](https://mctema.lt):
+
+```
+SHA-256  f4008fa041599eec0f66ce30dbef184cc669358aacd0814f02378172467c1aac
+```
+
+- [VirusTotal scan](https://www.virustotal.com/gui/file/f4008fa041599eec0f66ce30dbef184cc669358aacd0814f02378172467c1aac) - 0/62 vendors flag it
+- [GitHub releases](https://github.com/Noldez/MCTemaLauncher/releases) are built from this source by a public workflow; each exe ships with `SHA256SUMS.txt` and a signed provenance attestation you can check with `gh attestation verify <exe> --repo Noldez/MCTemaLauncher`
+
+The installer is not yet code-signed ([#5](https://github.com/Noldez/MCTemaLauncher/issues/5)), so Windows SmartScreen may warn on first run - the checksum and scan above are how you verify authenticity until then.
+
 ## Why open source
 
 So players can verify what the launcher does. It talks only to `mctema.lt`, official Mojang/Fabric/Modrinth endpoints and `mc-heads.net` - nothing else. Client mods are hash-verified before every launch. Releases are built from this source with published SHA-256 checksums.
