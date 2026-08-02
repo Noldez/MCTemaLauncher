@@ -358,7 +358,7 @@ ipcMain.handle('config:set', (_e, patch) => {
   if (next.username != null) next.username = String(next.username).slice(0, 16);
   saveConfig(next);
   if (patch && 'discordRpc' in patch) {
-    if (patch.discordRpc) { setRpc('Paleidykloje', SERVER.host, true); initRpc(); }
+    if (patch.discordRpc) { setRpc('Launcheryje', SERVER.host, true); initRpc(); }
     else destroyRpc();
   }
   return next;
@@ -824,7 +824,7 @@ ipcMain.handle('game:play', async (_e, payload) => {
       sessionStart = null;
     }
     send('mc:closed', code);
-    setRpc('Paleidykloje', SERVER.host, true);
+    setRpc('Launcheryje', SERVER.host, true);
     log(`Zaidimo procesas baigtas (kodas ${code}).`);
     if (win && !win.isDestroyed()) { win.show(); win.focus(); }
   });
