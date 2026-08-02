@@ -29,6 +29,7 @@ Official desktop launcher for the [MC Tema](https://mctema.lt) Minecraft server 
 - **Screenshot gallery** - browse local shots, submit the best ones to the community gallery on mctema.lt
 - **Skin locker** - local skin collection with live 3D preview
 - **Optional mods** - Sodium, Lithium, Iris and more, installed from Modrinth with checksum verification on every launch
+- **In-game client features** - MC Tema settings and shortcuts in the pause menu, a badge in the tab list next to other players on the client, and Residence claim previews
 - **Automatic updates** - silent download, one-click install
 
 ## Verify your download
@@ -82,7 +83,9 @@ Found something off? See [SECURITY.md](SECURITY.md).
 
 **Logging in.** Your password goes to `mctema.lt/api/launcher/login` over a certificate-pinned connection and is checked against the server's AuthMe database, the same account you use in game. The server returns a session token plus a refresh token, and staying signed in afterwards uses the refresh token, so **the password is not sent again**.
 
-**Why the password is still stored.** It sits encrypted in `auth.dat` for one remaining reason: logging you into the server automatically once the game starts. The client mod answers the server's challenge with it, so nothing else can stand in for it yet. Replacing that with a short-lived launch ticket is what would let the launcher stop keeping it at all.
+**Signing you in to the game.** The launcher does *not* hand Minecraft your password. Anything loaded into that JVM can read its environment, mods you install yourself included, so the password would be the one credential a hostile mod could simply pick up. Instead the launcher asks the site for a one-shot login ticket - one nickname, one use, five minutes - and passes only that. The client mod sends it through the encrypted handshake and the server redeems it, after which it is worth nothing. If a ticket cannot be issued the game still starts and you type `/login` once.
+
+**Why the password is still stored.** It sits encrypted in `auth.dat` so you are not asked for it every time: it signs you in and stands in when there is no usable refresh token. It never leaves the launcher.
 
 **Playing.** Before every launch the bundled client mods are hashed and compared against known values, and the game's mods folder is rebuilt from scratch. A mismatch aborts the launch rather than joining the server with modified code. The game then runs on the bundled Temurin JRE 21 with a Fabric profile and connects straight to `play.mctema.lt`.
 
@@ -98,6 +101,7 @@ Grepping the source for `https://` returns a few more, and it is worth saying wh
 - **Credentials.** Stored through the OS keystore, DPAPI on Windows and libsecret or kwallet on Linux. On Linux the launcher refuses to save anything when only Chromium's `basic_text` backend is available, because that "encryption" uses a hardcoded key.
 - **Session tokens.** 32 random bytes. The server stores only their SHA-256, so a database leak yields nothing usable. Logging out revokes the token, and changing your password invalidates every session.
 - **Refresh tokens rotate.** Each one can be exchanged exactly once. If a token that has already been used turns up again, a copy is in circulation, so every token from that login is revoked and you are asked to sign in. Theft is made visible instead of silent.
+- **Nothing valuable reaches the game process.** Mods share one JVM and can all read its environment, and you can install mods of your own, so the launcher assumes anything it puts there is readable by a stranger. It puts in a single-use login ticket and a token scoped to nothing but the tab-list presence beat. Neither is worth anything once used, and the account password is not there at all.
 - **Downloads are verified.** Minecraft libraries and the client jar are checked against Mojang's published hashes, and optional mods against the SHA-512 Modrinth publishes, before anything is loaded as code. A file that does not match is refused rather than used.
 - **Client integrity.** Bundled mods are hash-verified on every launch, not just at install.
 - **No telemetry.** The launcher reports nothing about you anywhere.
