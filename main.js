@@ -27,7 +27,7 @@ const SERVER = { host: 'play.mctema.lt', port: 25565 };
 const MC_VERSION = '1.21.11';
 const FABRIC_LOADER = '0.19.3';
 const FABRIC_PROFILE = `fabric-loader-${FABRIC_LOADER}-${MC_VERSION}`;
-const DISCORD_CLIENT_ID = '';
+const DISCORD_CLIENT_ID = '1059908403998236763';
 
 const gameDir = path.join(app.getPath('appData'), '.mctema');
 const configPath = path.join(gameDir, 'launcher.json');
@@ -149,6 +149,21 @@ const FRIEND_ERR = {
   BAD_FILE: 'Netinkamas failas.',
 };
 
+/**
+ * A short-lived, presence-only token for the game process.
+ *
+ * Best effort on purpose: this buys a badge in the tab list, and nothing about
+ * it is worth refusing to start Minecraft over.
+ */
+async function mintGameToken() {
+  try {
+    const r = await friendsApi('POST', '/api/launcher/game-token');
+    return r && r.ok && typeof r.token === 'string' ? r.token : null;
+  } catch {
+    return null;
+  }
+}
+
 async function friendsApi(method, apiPath, body) {
   let a = loadAuth();
   if (!a) return { ok: false, error: 'Prisijunk iš naujo.' };
@@ -214,7 +229,7 @@ ipcMain.handle('chat:sendImage', async (_e, p) => {
 
 const MOD_HASHES = {
   'fabric-api.jar': 'bdff7fd7e220085cfad2ff9b1f40dde6534ae0b96cf378f97a374bc54cb9ed0f',
-  'mctemaclient.jar': 'c95b8695cab972be53cd049d0dc9b8a965700357019ebd5d774811d7ceec8c56',
+  'mctemaclient.jar': '1fc71a4d4b4a1395d0cdc7c5a9aabd4a41294dc2878dd4f7be3c30ef7f83ceaf',
 };
 
 const resolveJava = () => resolveBundledJava({
@@ -860,24 +875,18 @@ ipcMain.handle('game:play', async (_e, payload) => {
 
   try {
     log(`Paleidziamas Minecraft ${MC_VERSION} kaip ${username} (${ram}G)...`);
-    let auth = loadAuth();
+    const auth = loadAuth();
     if (auth && auth.username.toLowerCase() === username.toLowerCase()) {
-      // The game keeps this token for as long as the session lasts and has no
-      // way to renew it, so a stale one is mended here rather than left to fail
-      // on the mod's first call. Best effort: the launch is not worth blocking
-      // over a cosmetic feature.
-      if (!auth.token) {
-        try {
-          auth = (await refreshLauncherToken(auth)) || auth;
-        } catch { /* no token, no badge; the game still starts */ }
-      }
+      // Never our own session token: the game runs third-party mods in the same
+      // JVM, and any of them can read this environment. What goes in is a
+      // separate token that reaches the presence beat and nothing else, so the
+      // worst it buys a thief is looking like they are playing.
+      const gameToken = await mintGameToken();
       // Scoped to the game process; never placed in our own environment, where
       // every child spawned while preparing the launch would inherit it.
-      // The token rides along so the mod can prove which account it is without
-      // the password: it only reads presence, and it expires on its own.
       opts.overrides = {
         ...(opts.overrides || {}),
-        env: { MCTEMA_PASS: auth.password, ...(auth.token ? { MCTEMA_TOKEN: auth.token } : {}) },
+        env: { MCTEMA_PASS: auth.password, ...(gameToken ? { MCTEMA_TOKEN: gameToken } : {}) },
       };
     }
     await launcher.launch(opts);
