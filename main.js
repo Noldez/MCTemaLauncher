@@ -11,6 +11,8 @@ const {
   apiRequest: pinnedApi,
   upload: pinnedUpload,
 } = require('./lib/pinned-http');
+const configStore = require('./lib/config');
+const { createCredentialStore, authErrText } = require('./lib/credentials');
 const { autoUpdater } = require('electron-updater');
 
 // Software WebGL fallback for GPU-less machines (VMs, blocklisted drivers);
@@ -30,59 +32,15 @@ function ensureDir() {
   try { fs.mkdirSync(gameDir, { recursive: true }); } catch {}
 }
 
-function loadConfig() {
-  const defaults = { username: '', ram: 4, closeOnPlay: false, discordRpc: true,
-    friends: [], totalPlayMs: 0, lastPlayedAt: null, skins: [], currentSkin: null,
-    resolution: { w: 1280, h: 720, fullscreen: false }, jvmArgs: '', optionalMods: [],
-    friendPrefs: {} };
-  try { return { ...defaults, ...JSON.parse(fs.readFileSync(configPath, 'utf8')) }; }
-  catch { return defaults; }
-}
-
-function saveConfig(cfg) {
-  ensureDir();
-  try { fs.writeFileSync(configPath, JSON.stringify(cfg, null, 2)); } catch {}
-}
+const loadConfig = () => configStore.load(configPath);
+const saveConfig = (cfg) => configStore.save(configPath, cfg);
 
 const authPath = path.join(gameDir, 'auth.dat');
-
-// On Linux, isEncryptionAvailable() also returns true for the `basic_text`
-// backend, which "encrypts" with a hardcoded key - that is obfuscation, not
-// storage we can trust with a password. Require a real keyring there.
-function keystoreUsable() {
-  if (!safeStorage.isEncryptionAvailable()) return false;
-  if (process.platform !== 'linux') return true;
-  return safeStorage.getSelectedStorageBackend() !== 'basic_text';
-}
-
-function loadAuth() {
-  try {
-    if (!fs.existsSync(authPath) || !keystoreUsable()) return null;
-    const o = JSON.parse(safeStorage.decryptString(fs.readFileSync(authPath)));
-    if (o && o.username && o.password) return o;
-  } catch {}
-  return null;
-}
-
-function saveAuth(username, password, token) {
-  ensureDir();
-  fs.writeFileSync(authPath, safeStorage.encryptString(JSON.stringify({ username, password, token: token || null })));
-}
-
-function clearAuth() {
-  try { fs.rmSync(authPath, { force: true }); } catch {}
-}
-
-function authErrText(r) {
-  const code = r && r.json && r.json.error;
-  switch (code) {
-    case 'AUTH_DOWN': return 'Prisijungimas laikinai neveikia.';
-    case 'RATE': return 'Per daug bandymų - pabandyk vėliau.';
-    case 'WRONG': return 'Neteisingas slapyvardis arba slaptažodis.';
-    case 'BAD_INPUT': return 'Slapyvardis: 3-16 simbolių (raidės, skaičiai, _).';
-    default: return 'Kažkas nepavyko. Pabandyk dar kartą.';
-  }
-}
+const credentials = createCredentialStore({ safeStorage, authPath });
+const keystoreUsable = () => credentials.keystoreUsable();
+const loadAuth = () => credentials.load();
+const saveAuth = (username, password, token) => credentials.save(username, password, token);
+const clearAuth = () => credentials.clear();
 
 ipcMain.handle('auth:state', () => {
   const a = loadAuth();
