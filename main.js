@@ -27,7 +27,7 @@ const SERVER = { host: 'play.mctema.lt', port: 25565 };
 const MC_VERSION = '1.21.11';
 const FABRIC_LOADER = '0.19.3';
 const FABRIC_PROFILE = `fabric-loader-${FABRIC_LOADER}-${MC_VERSION}`;
-const DISCORD_CLIENT_ID = '';
+const DISCORD_CLIENT_ID = '1059908403998236763';
 
 const gameDir = path.join(app.getPath('appData'), '.mctema');
 const configPath = path.join(gameDir, 'launcher.json');
@@ -149,6 +149,38 @@ const FRIEND_ERR = {
   BAD_FILE: 'Netinkamas failas.',
 };
 
+/**
+ * A short-lived, presence-only token for the game process.
+ *
+ * Best effort on purpose: this buys a badge in the tab list, and nothing about
+ * it is worth refusing to start Minecraft over.
+ */
+async function mintGameToken() {
+  try {
+    const r = await friendsApi('POST', '/api/launcher/game-token');
+    return r && r.ok && typeof r.token === 'string' ? r.token : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A one-shot stand-in for the account password, for the auto-login handshake.
+ *
+ * The game process runs mods we did not write and they can all read its
+ * environment, so what goes in there should be worth as little as possible. A
+ * ticket is spent the moment the server redeems it and could only ever have
+ * logged in this one nick.
+ */
+async function mintLoginTicket() {
+  try {
+    const r = await friendsApi('POST', '/api/launcher/login-ticket');
+    return r && r.ok && typeof r.ticket === 'string' ? r.ticket : null;
+  } catch {
+    return null;
+  }
+}
+
 async function friendsApi(method, apiPath, body) {
   let a = loadAuth();
   if (!a) return { ok: false, error: 'Prisijunk iš naujo.' };
@@ -214,7 +246,7 @@ ipcMain.handle('chat:sendImage', async (_e, p) => {
 
 const MOD_HASHES = {
   'fabric-api.jar': 'bdff7fd7e220085cfad2ff9b1f40dde6534ae0b96cf378f97a374bc54cb9ed0f',
-  'mctemaclient.jar': '23ca5d294e9689eed4729490133a719a04f0d55149aaccb2720b6da217332dd4',
+  'mctemaclient.jar': '18a5f9d48464a9a6808818cefc45e2514154b1190504b929404ced70bba435a7',
 };
 
 const resolveJava = () => resolveBundledJava({
@@ -343,7 +375,7 @@ ipcMain.handle('config:set', (_e, patch) => {
   if (next.username != null) next.username = String(next.username).slice(0, 16);
   saveConfig(next);
   if (patch && 'discordRpc' in patch) {
-    if (patch.discordRpc) { setRpc('Leidykleje', SERVER.host, true); initRpc(); }
+    if (patch.discordRpc) { setRpc('Launcheryje', SERVER.host, true); initRpc(); }
     else destroyRpc();
   }
   return next;
@@ -809,21 +841,21 @@ ipcMain.handle('game:play', async (_e, payload) => {
       sessionStart = null;
     }
     send('mc:closed', code);
-    setRpc('Leidykleje', SERVER.host, true);
+    setRpc('Launcheryje', SERVER.host, true);
     log(`Zaidimo procesas baigtas (kodas ${code}).`);
     if (win && !win.isDestroyed()) { win.show(); win.focus(); }
   });
 
   let fabricProfile;
   try {
-    log('Ruosiamas Fabric loader...');
+    log('Ruošiamas Fabric loader...');
     fabricProfile = await ensureFabric();
     log('Tikrinamas klientas...');
     ensureMods();
-    log('Klientas paruostas.');
+    log('Klientas paruoštas.');
   } catch (err) {
     launching = false;
-    log('Paruosimas nepavyko: ' + String((err && err.message) || err));
+    log('Paruošimas nepavyko: ' + String((err && err.message) || err));
     return { ok: false, error: 'Nepavyko paruosti kliento: ' + String((err && err.message) || err) };
   }
 
@@ -859,17 +891,36 @@ ipcMain.handle('game:play', async (_e, payload) => {
   } catch {}
 
   try {
-    log(`Paleidziamas Minecraft ${MC_VERSION} kaip ${username} (${ram}G)...`);
+    log(`Paleidžiamas Minecraft ${MC_VERSION} kaip ${username} (${ram}G)...`);
     const auth = loadAuth();
     if (auth && auth.username.toLowerCase() === username.toLowerCase()) {
+      // Never our own session token: the game runs third-party mods in the same
+      // JVM, and any of them can read this environment. What goes in is a
+      // separate token that reaches the presence beat and nothing else, so the
+      // worst it buys a thief is looking like they are playing.
+      const [gameToken, ticket] = await Promise.all([mintGameToken(), mintLoginTicket()]);
+      // The account password does not go in here, and must not be put back.
+      // Everything loaded into that JVM can read this environment, mods we did
+      // not write included, and the launcher lets a player install any jar they
+      // like. A ticket is spent the moment the server redeems it and could only
+      // ever have logged in this one nick, so finding it there is worth nothing.
+      //
+      // If the ticket cannot be minted the game still starts; the player types
+      // /login themselves that once. That is the right trade against leaving a
+      // password where anything can read it.
+      const secret = ticket ? { MCTEMA_TICKET: ticket } : {};
+      if (!ticket) log('Nepavyko gauti prisijungimo bilieto - prisijunk su /login.');
       // Scoped to the game process; never placed in our own environment, where
       // every child spawned while preparing the launch would inherit it.
-      opts.overrides = { ...(opts.overrides || {}), env: { MCTEMA_PASS: auth.password } };
+      opts.overrides = {
+        ...(opts.overrides || {}),
+        env: { ...secret, ...(gameToken ? { MCTEMA_TOKEN: gameToken } : {}) },
+      };
     }
     await launcher.launch(opts);
     sessionStart = Date.now();
     send('mc:launched', true);
-    setRpc('Zaidzia Minecraft', SERVER.host, true);
+    setRpc('Žaidžia Minecraft', SERVER.host, true);
     log('Minecraft paleistas - jungiamasi prie ' + SERVER.host + '.');
     if (cfg.closeOnPlay && win && !win.isDestroyed()) win.hide();
     return { ok: true };
