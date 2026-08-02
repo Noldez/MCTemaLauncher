@@ -860,8 +860,17 @@ ipcMain.handle('game:play', async (_e, payload) => {
 
   try {
     log(`Paleidziamas Minecraft ${MC_VERSION} kaip ${username} (${ram}G)...`);
-    const auth = loadAuth();
+    let auth = loadAuth();
     if (auth && auth.username.toLowerCase() === username.toLowerCase()) {
+      // The game keeps this token for as long as the session lasts and has no
+      // way to renew it, so a stale one is mended here rather than left to fail
+      // on the mod's first call. Best effort: the launch is not worth blocking
+      // over a cosmetic feature.
+      if (!auth.token) {
+        try {
+          auth = (await refreshLauncherToken(auth)) || auth;
+        } catch { /* no token, no badge; the game still starts */ }
+      }
       // Scoped to the game process; never placed in our own environment, where
       // every child spawned while preparing the launch would inherit it.
       // The token rides along so the mod can prove which account it is without
