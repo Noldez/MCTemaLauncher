@@ -214,7 +214,7 @@ ipcMain.handle('chat:sendImage', async (_e, p) => {
 
 const MOD_HASHES = {
   'fabric-api.jar': 'bdff7fd7e220085cfad2ff9b1f40dde6534ae0b96cf378f97a374bc54cb9ed0f',
-  'mctemaclient.jar': 'fa1c9c31dfc82e958cfc283c05d6c3356e3205a9af4f2226242980a0ccaafaf8',
+  'mctemaclient.jar': 'c95b8695cab972be53cd049d0dc9b8a965700357019ebd5d774811d7ceec8c56',
 };
 
 const resolveJava = () => resolveBundledJava({
@@ -864,7 +864,12 @@ ipcMain.handle('game:play', async (_e, payload) => {
     if (auth && auth.username.toLowerCase() === username.toLowerCase()) {
       // Scoped to the game process; never placed in our own environment, where
       // every child spawned while preparing the launch would inherit it.
-      opts.overrides = { ...(opts.overrides || {}), env: { MCTEMA_PASS: auth.password } };
+      // The token rides along so the mod can prove which account it is without
+      // the password: it only reads presence, and it expires on its own.
+      opts.overrides = {
+        ...(opts.overrides || {}),
+        env: { MCTEMA_PASS: auth.password, ...(auth.token ? { MCTEMA_TOKEN: auth.token } : {}) },
+      };
     }
     await launcher.launch(opts);
     sessionStart = Date.now();
