@@ -33,8 +33,8 @@ function ensureDir() {
   try { fs.mkdirSync(gameDir, { recursive: true }); } catch {}
 }
 
-const loadConfig = () => configStore.load(configPath);
-const saveConfig = (cfg) => configStore.save(configPath, cfg);
+const loadConfig = () => configStore.loadConfig(configPath);
+const saveConfig = (cfg) => configStore.saveConfig(configPath, cfg);
 
 const authPath = path.join(gameDir, 'auth.dat');
 const credentials = createCredentialStore({ safeStorage, authPath });
