@@ -13,6 +13,7 @@ const {
 const configStore = require('./lib/config');
 const { createCredentialStore, authErrText } = require('./lib/credentials');
 const { mcStatus } = require('./lib/mc-status');
+const { stageMods, resolveJava: resolveBundledJava } = require('./lib/mods');
 const { autoUpdater } = require('electron-updater');
 
 // Software WebGL fallback for GPU-less machines (VMs, blocklisted drivers);
@@ -175,22 +176,11 @@ const MOD_HASHES = {
   'mctemaclient.jar': '23ca5d294e9689eed4729490133a719a04f0d55149aaccb2720b6da217332dd4',
 };
 
-function sha256File(p) {
-  return crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex');
-}
-
-function resolveJava() {
-  const exe = process.platform === 'win32' ? 'java.exe' : 'java';
-  const candidates = [
-    app.isPackaged
-      ? path.join(process.resourcesPath, 'jre', 'bin', exe)
-      : path.join(__dirname, 'assets', 'jre', 'bin', exe),
-  ];
-  for (const c of candidates) {
-    if (fs.existsSync(c)) return c;
-  }
-  return undefined;
-}
+const resolveJava = () => resolveBundledJava({
+  packaged: app.isPackaged,
+  resourcesPath: process.resourcesPath,
+  appDir: __dirname,
+});
 
 function bundledModsDir() {
   return app.isPackaged
@@ -213,29 +203,13 @@ async function ensureFabric() {
 }
 
 function ensureMods() {
-  const src = bundledModsDir();
-  const dst = path.join(gameDir, 'mods');
-  for (const f of Object.keys(MOD_HASHES)) {
-    const p = path.join(src, f);
-    if (!fs.existsSync(p)) throw new Error(`Missing client file: ${f}`);
-    if (sha256File(p) !== MOD_HASHES[f]) {
-      throw new Error(`Client integrity check failed for ${f}. Reinstall the launcher.`);
-    }
-  }
-  try { fs.rmSync(dst, { recursive: true, force: true }); } catch {}
-  fs.mkdirSync(dst, { recursive: true });
-  for (const f of Object.keys(MOD_HASHES)) {
-    fs.copyFileSync(path.join(src, f), path.join(dst, f));
-  }
-  for (const st of (loadConfig().optionalMods || [])) {
-    if (!st.enabled) continue;
-    const p = path.join(optionalDir, st.file);
-    try {
-      if (fs.existsSync(p) && sha256File(p) === st.sha256) {
-        fs.copyFileSync(p, path.join(dst, st.file));
-      }
-    } catch {}
-  }
+  stageMods({
+    srcDir: bundledModsDir(),
+    dstDir: path.join(gameDir, 'mods'),
+    hashes: MOD_HASHES,
+    optionalDir,
+    optionalMods: loadConfig().optionalMods || [],
+  });
 }
 
 const { Client: RpcClient } = require('@xhayper/discord-rpc');
