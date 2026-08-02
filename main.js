@@ -229,7 +229,7 @@ ipcMain.handle('chat:sendImage', async (_e, p) => {
 
 const MOD_HASHES = {
   'fabric-api.jar': 'bdff7fd7e220085cfad2ff9b1f40dde6534ae0b96cf378f97a374bc54cb9ed0f',
-  'mctemaclient.jar': '1fc71a4d4b4a1395d0cdc7c5a9aabd4a41294dc2878dd4f7be3c30ef7f83ceaf',
+  'mctemaclient.jar': '2ddddacf66b17bf7b0e4ab2b1dda43da126df5031b1128cf98257e29b0bd7432',
 };
 
 const resolveJava = () => resolveBundledJava({
@@ -358,7 +358,7 @@ ipcMain.handle('config:set', (_e, patch) => {
   if (next.username != null) next.username = String(next.username).slice(0, 16);
   saveConfig(next);
   if (patch && 'discordRpc' in patch) {
-    if (patch.discordRpc) { setRpc('Leidykleje', SERVER.host, true); initRpc(); }
+    if (patch.discordRpc) { setRpc('Paleidykloje', SERVER.host, true); initRpc(); }
     else destroyRpc();
   }
   return next;
@@ -824,21 +824,21 @@ ipcMain.handle('game:play', async (_e, payload) => {
       sessionStart = null;
     }
     send('mc:closed', code);
-    setRpc('Leidykleje', SERVER.host, true);
+    setRpc('Paleidykloje', SERVER.host, true);
     log(`Zaidimo procesas baigtas (kodas ${code}).`);
     if (win && !win.isDestroyed()) { win.show(); win.focus(); }
   });
 
   let fabricProfile;
   try {
-    log('Ruosiamas Fabric loader...');
+    log('Ruošiamas Fabric loader...');
     fabricProfile = await ensureFabric();
     log('Tikrinamas klientas...');
     ensureMods();
-    log('Klientas paruostas.');
+    log('Klientas paruoštas.');
   } catch (err) {
     launching = false;
-    log('Paruosimas nepavyko: ' + String((err && err.message) || err));
+    log('Paruošimas nepavyko: ' + String((err && err.message) || err));
     return { ok: false, error: 'Nepavyko paruosti kliento: ' + String((err && err.message) || err) };
   }
 
@@ -874,7 +874,7 @@ ipcMain.handle('game:play', async (_e, payload) => {
   } catch {}
 
   try {
-    log(`Paleidziamas Minecraft ${MC_VERSION} kaip ${username} (${ram}G)...`);
+    log(`Paleidžiamas Minecraft ${MC_VERSION} kaip ${username} (${ram}G)...`);
     const auth = loadAuth();
     if (auth && auth.username.toLowerCase() === username.toLowerCase()) {
       // Never our own session token: the game runs third-party mods in the same
@@ -892,7 +892,7 @@ ipcMain.handle('game:play', async (_e, payload) => {
     await launcher.launch(opts);
     sessionStart = Date.now();
     send('mc:launched', true);
-    setRpc('Zaidzia Minecraft', SERVER.host, true);
+    setRpc('Žaidžia Minecraft', SERVER.host, true);
     log('Minecraft paleistas - jungiamasi prie ' + SERVER.host + '.');
     if (cfg.closeOnPlay && win && !win.isDestroyed()) win.hide();
     return { ok: true };
