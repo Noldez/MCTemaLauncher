@@ -1,11 +1,10 @@
 const { app, BrowserWindow, ipcMain, shell, clipboard, nativeImage, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const net = require('net');
 const crypto = require('crypto');
 const { pathToFileURL } = require('url');
 const { Client } = require('./lib/mclc');
-const { writeVarInt, readVarInt, offlineUUID } = require('./lib/protocol');
+const { offlineUUID } = require('./lib/protocol');
 const {
   postJson: pinnedPostJson,
   apiRequest: pinnedApi,
@@ -13,6 +12,7 @@ const {
 } = require('./lib/pinned-http');
 const configStore = require('./lib/config');
 const { createCredentialStore, authErrText } = require('./lib/credentials');
+const { mcStatus } = require('./lib/mc-status');
 const { autoUpdater } = require('electron-updater');
 
 // Software WebGL fallback for GPU-less machines (VMs, blocklisted drivers);
@@ -445,49 +445,6 @@ ipcMain.handle('app:installUpdate', () => {
   try { autoUpdater.quitAndInstall(true, true); } catch {}
   return true;
 });
-
-function mcStatus(host, port, timeout = 4000) {
-  return new Promise((resolve) => {
-    let done = false;
-    const finish = (v) => { if (!done) { done = true; try { socket.destroy(); } catch {} resolve(v); } };
-    const socket = net.createConnection({ host, port });
-    socket.setTimeout(timeout, () => finish({ online: false, players: { online: 0, max: 0 }, sample: [] }));
-    socket.on('error', () => finish({ online: false, players: { online: 0, max: 0 }, sample: [] }));
-
-    const pkt = (id, ...parts) => {
-      const data = Buffer.concat([writeVarInt(id), ...parts]);
-      return Buffer.concat([writeVarInt(data.length), data]);
-    };
-    const str = (s) => { const b = Buffer.from(s, 'utf8'); return Buffer.concat([writeVarInt(b.length), b]); };
-
-    socket.on('connect', () => {
-      const portBuf = Buffer.alloc(2); portBuf.writeUInt16BE(port);
-      const handshake = pkt(0x00, writeVarInt(-1), str(host), portBuf, writeVarInt(1));
-      socket.write(Buffer.concat([handshake, pkt(0x00)]));
-    });
-
-    let buf = Buffer.alloc(0);
-    socket.on('data', (chunk) => {
-      buf = Buffer.concat([buf, chunk]);
-      const len = readVarInt(buf, 0);
-      if (!len || buf.length < len.size + len.value) return;
-      try {
-        let off = len.size;
-        const id = readVarInt(buf, off); off += id.size;
-        const sLen = readVarInt(buf, off); off += sLen.size;
-        const json = JSON.parse(buf.slice(off, off + sLen.value).toString('utf8'));
-        const sample = ((json.players && json.players.sample) || [])
-          .map((p) => p && p.name)
-          .filter((n) => typeof n === 'string' && /^[A-Za-z0-9_]{1,16}$/.test(n));
-        finish({
-          online: true,
-          players: { online: (json.players && json.players.online) || 0, max: (json.players && json.players.max) || 0 },
-          sample,
-        });
-      } catch { finish({ online: false, players: { online: 0, max: 0 }, sample: [] }); }
-    });
-  });
-}
 
 ipcMain.handle('server:status', () => mcStatus(SERVER.host, SERVER.port, 4000));
 
