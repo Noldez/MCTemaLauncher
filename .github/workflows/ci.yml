@@ -20,6 +20,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - name: Validate electron-builder config
+        run: node scripts/validate-build-config.js
       - name: Syntax check
         run: |
           for f in main.js preload.js toast-preload.js renderer/renderer.js renderer/toast.js renderer/views/*.js; do
