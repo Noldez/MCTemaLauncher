@@ -1,6 +1,6 @@
 {
   "name": "mctema-launcher",
-  "version": "0.2.14",
+  "version": "0.2.15",
   "description": "MC Tema Minecraft launcher - offline mode, auto-connect to play.mctema.lt (1.21.11)",
   "main": "main.js",
   "author": "ただし (Discord: noldez)",
@@ -88,6 +88,9 @@
       "icon": "assets/icon.png",
       "category": "Game",
       "executableName": "mctema-launcher",
+      "desktopName": "mctema-launcher.desktop",
+      "syncDesktopName": true,
+      "maintainer": "Noldez <30418741+Noldez@users.noreply.github.com>",
       "artifactName": "MCTemaLauncher-${version}.${ext}",
       "extraResources": [
         {
