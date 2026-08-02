@@ -80,7 +80,9 @@ Found something off? See [SECURITY.md](SECURITY.md).
 
 **Where the logic lives.** `lib/` holds the parts worth reading on their own: `pinned-http.js` (every call to our API), `credentials.js` (what touches your password), `mods.js` (integrity checks), `config.js`, `mc-status.js`. These have unit tests, and none of them need Electron to run.
 
-**Logging in.** Your password goes to `mctema.lt/api/launcher/login` over a certificate-pinned connection and is checked against the server's AuthMe database, the same account you use in game. The server returns a session token valid for 30 days. Both the token and the password are stored encrypted by the OS keystore in `auth.dat`; the password is kept because refreshing an expired token needs it.
+**Logging in.** Your password goes to `mctema.lt/api/launcher/login` over a certificate-pinned connection and is checked against the server's AuthMe database, the same account you use in game. The server returns a session token plus a refresh token, and staying signed in afterwards uses the refresh token, so **the password is not sent again**.
+
+**Why the password is still stored.** It sits encrypted in `auth.dat` for one remaining reason: logging you into the server automatically once the game starts. The client mod answers the server's challenge with it, so nothing else can stand in for it yet. Replacing that with a short-lived launch ticket is what would let the launcher stop keeping it at all.
 
 **Playing.** Before every launch the bundled client mods are hashed and compared against known values, and the game's mods folder is rebuilt from scratch. A mismatch aborts the launch rather than joining the server with modified code. The game then runs on the bundled Temurin JRE 21 with a Fabric profile and connects straight to `play.mctema.lt`.
 
@@ -92,9 +94,11 @@ Grepping the source for `https://` returns a few more, and it is worth saying wh
 
 ## Security
 
-- **Certificate pinning.** Calls to `mctema.lt` are rejected unless the certificate chain contains one of the public keys pinned in [`lib/pinned-http.js`](lib/pinned-http.js). A rogue certificate authority, a corporate proxy or hostile wifi cannot read your credentials. Backup keys for a second CA are pinned as well, so a certificate change cannot lock everyone out.
+- **Certificate pinning.** Every call to `mctema.lt` is rejected unless the certificate chain contains one of the public keys pinned in [`lib/pinned-http.js`](lib/pinned-http.js). A rogue certificate authority, a corporate proxy or hostile wifi cannot read your credentials. Backup keys for a second CA are pinned as well, so a certificate change cannot lock everyone out. The one deliberate exception is the updater, explained above.
 - **Credentials.** Stored through the OS keystore, DPAPI on Windows and libsecret or kwallet on Linux. On Linux the launcher refuses to save anything when only Chromium's `basic_text` backend is available, because that "encryption" uses a hardcoded key.
 - **Session tokens.** 32 random bytes. The server stores only their SHA-256, so a database leak yields nothing usable. Logging out revokes the token, and changing your password invalidates every session.
+- **Refresh tokens rotate.** Each one can be exchanged exactly once. If a token that has already been used turns up again, a copy is in circulation, so every token from that login is revoked and you are asked to sign in. Theft is made visible instead of silent.
+- **Downloads are verified.** Minecraft libraries and the client jar are checked against Mojang's published hashes, and optional mods against the SHA-512 Modrinth publishes, before anything is loaded as code. A file that does not match is refused rather than used.
 - **Client integrity.** Bundled mods are hash-verified on every launch, not just at install.
 - **No telemetry.** The launcher reports nothing about you anywhere.
 - **Verifiable builds.** Every release ships `SHA256SUMS.txt` and a signed provenance attestation from the workflow that built it:
