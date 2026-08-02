@@ -47,9 +47,18 @@ const CERT_PINS = [
 ];
 const authPath = path.join(gameDir, 'auth.dat');
 
+// On Linux, isEncryptionAvailable() also returns true for the `basic_text`
+// backend, which "encrypts" with a hardcoded key - that is obfuscation, not
+// storage we can trust with a password. Require a real keyring there.
+function keystoreUsable() {
+  if (!safeStorage.isEncryptionAvailable()) return false;
+  if (process.platform !== 'linux') return true;
+  return safeStorage.getSelectedStorageBackend() !== 'basic_text';
+}
+
 function loadAuth() {
   try {
-    if (!fs.existsSync(authPath) || !safeStorage.isEncryptionAvailable()) return null;
+    if (!fs.existsSync(authPath) || !keystoreUsable()) return null;
     const o = JSON.parse(safeStorage.decryptString(fs.readFileSync(authPath)));
     if (o && o.username && o.password) return o;
   } catch {}
@@ -132,8 +141,13 @@ ipcMain.handle('auth:login', async (_e, payload) => {
     return { ok: false, error: 'Slapyvardis: 3-16 simbolių (raidės, skaičiai, _).' };
   }
   if (!password) return { ok: false, error: 'Įvesk slaptažodį.' };
-  if (!safeStorage.isEncryptionAvailable()) {
-    return { ok: false, error: 'OS saugykla nepasiekiama.' };
+  if (!keystoreUsable()) {
+    return {
+      ok: false,
+      error: process.platform === 'linux'
+        ? 'Nerasta saugi raktinė (gnome-keyring arba kwallet).'
+        : 'OS saugykla nepasiekiama.',
+    };
   }
   const r = await pinnedPostJson('/api/launcher/login', { username, password });
   if (r.error) {
@@ -149,7 +163,13 @@ ipcMain.handle('auth:login', async (_e, payload) => {
   return { ok: false, error: authErrText(r) };
 });
 
-ipcMain.handle('auth:logout', () => { clearAuth(); return { ok: true }; });
+ipcMain.handle('auth:logout', async () => {
+  // Retire the token server-side too, so it cannot outlive the logout.
+  const a = loadAuth();
+  if (a && a.token) await pinnedApi('POST', '/api/launcher/logout', null, a.token);
+  clearAuth();
+  return { ok: true };
+});
 
 function pinnedApi(method, reqPath, body, token) {
   return new Promise((resolve) => {
@@ -753,9 +773,13 @@ ipcMain.handle('gallery:submit', async (_e, payload) => {
     const category = String((payload && payload.category) || 'bendra');
     if (/^[a-z]{3,24}$/.test(category)) form.append('category', category);
     form.append('image', new Blob([buf], { type }), path.basename(p));
+    // Send the session token so the server credits the submission to the
+    // logged-in account instead of trusting the nick in the form body.
+    const a = loadAuth();
     const r = await fetch(`${SITE_API}/gallery/submit`, {
       method: 'POST',
       body: form,
+      headers: a && a.token ? { Authorization: `Bearer ${a.token}` } : {},
       signal: AbortSignal.timeout(15000),
     });
     const j = await r.json().catch(() => ({}));
