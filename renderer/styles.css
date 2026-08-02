@@ -67,7 +67,7 @@ body { background: var(--bg); color: var(--ink); font-family: 'Poppins', sans-se
   background: var(--red); transform: translate(12px, -12px); }
 
 /* ---- content + views ---- */
-.content { flex: 1; margin-left: var(--rail); overflow-y: auto; }
+.content { flex: 1; margin-left: var(--rail); overflow-y: auto; overflow-x: hidden; }
 .content::-webkit-scrollbar { width: 8px; }
 .content::-webkit-scrollbar-thumb { background: var(--panel2); border-radius: 8px; }
 .view { display: none; animation: viewIn .25s ease both; position: relative; }

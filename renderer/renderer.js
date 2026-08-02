@@ -16,8 +16,42 @@ function fmtAgo(ts) {
 }
 const headUrl = (nick, size) => `https://mc-heads.net/avatar/${encodeURIComponent(nick || 'MHF_Steve')}/${size || 32}`;
 
+// Flat front-view skin render for machines without WebGL (VMs, blocklisted GPUs).
+async function flatSkin(canvas, url, variant) {
+  const img = new Image();
+  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const s = Math.max(1, Math.floor(Math.min(canvas.width / 18, canvas.height / 34)));
+  const ox = Math.floor((canvas.width - 16 * s) / 2);
+  const oy = Math.floor((canvas.height - 32 * s) / 2);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.imageSmoothingEnabled = false;
+  const legacy = img.height <= 32;
+  const aw = variant === 'slim' ? 3 : 4;
+  const d = (sx, sy, sw, sh, dx, dy) => ctx.drawImage(img, sx, sy, sw, sh, ox + dx * s, oy + dy * s, sw * s, sh * s);
+  d(8, 8, 8, 8, 4, 0);                                                  // head
+  d(20, 20, 8, 12, 4, 8);                                               // body
+  d(44, 20, aw, 12, 4 - aw, 8);                                         // right arm
+  if (legacy) d(44, 20, aw, 12, 12, 8); else d(36, 52, aw, 12, 12, 8);  // left arm
+  d(4, 20, 4, 12, 4, 20);                                               // right leg
+  if (legacy) d(4, 20, 4, 12, 8, 20); else d(20, 52, 4, 12, 8, 20);     // left leg
+  d(40, 8, 8, 8, 4, 0);                                                 // hat overlay
+}
+
+// skinview3d needs WebGL; on failure callers switch to flatSkin on a fresh canvas
+// (the old canvas is unusable for 2d after a failed webgl context attempt).
+function swapCanvas(old, w, h) {
+  const cv = document.createElement('canvas');
+  cv.id = old.id;
+  cv.width = w;
+  cv.height = h;
+  old.replaceWith(cv);
+  return cv;
+}
+
 window.ui = {
-  $, el, fmtAgo, headUrl,
+  $, el, fmtAgo, headUrl, flatSkin, swapCanvas,
   openUrl: (u) => window.api.openExternal(u),
   state: { cfg: null, status: null },
   showView(name) {
