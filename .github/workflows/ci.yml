@@ -21,11 +21,21 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+      - name: Typecheck
+        run: npm run typecheck
       - name: Validate electron-builder config
         run: node scripts/validate-build-config.js
-      # Early warning only: Cloudflare picks our edge CA, so if it changes,
-      # pinned clients break and this is where we find out. Non-blocking,
-      # because a network hiccup on a runner must not fail unrelated PRs.
+      # Cloudflare picks our edge CA, so if it changes, pinned clients break and
+      # this is where we find out. Exit 2 means the runner could not reach the
+      # site and is tolerated; exit 1 means the pins genuinely do not match, or
+      # the script itself broke, and must fail. It previously ran with
+      # continue-on-error, which hid the script breaking when the pins moved.
       - name: Check certificate pins against live site
-        run: npm run check-pins
-        continue-on-error: true
+        run: |
+          npm run check-pins && exit 0
+          code=$?
+          if [ "$code" = "2" ]; then
+            echo "::warning::could not reach mctema.lt; pin check skipped"
+            exit 0
+          fi
+          exit $code
