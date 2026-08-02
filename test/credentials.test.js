@@ -47,7 +47,7 @@ function store(opts = {}) {
 
 test('credentials round-trip through the keystore', () => {
   const { api, io } = store();
-  api.save('Noldez', 'hunter2', 'tok');
+  api.save({ username: 'Noldez', password: 'hunter2', token: 'tok', refreshToken: 'ref' });
   assert.ok(io.files[AUTH_PATH], 'blob written');
   assert.equal(io.files[AUTH_PATH].toString().startsWith('enc:'), true, 'stored encrypted');
 
@@ -55,11 +55,20 @@ test('credentials round-trip through the keystore', () => {
   assert.equal(loaded.username, 'Noldez');
   assert.equal(loaded.password, 'hunter2');
   assert.equal(loaded.token, 'tok');
+  assert.equal(loaded.refreshToken, 'ref');
+});
+
+test('token fields default to null when not supplied', () => {
+  const { api } = store();
+  api.save({ username: 'Noldez', password: 'hunter2' });
+  const loaded = api.load();
+  assert.equal(loaded.token, null);
+  assert.equal(loaded.refreshToken, null);
 });
 
 test('clear removes the stored credentials', () => {
   const { api } = store();
-  api.save('Noldez', 'hunter2', 'tok');
+  api.save({ username: 'Noldez', password: 'hunter2', token: 'tok' });
   api.clear();
   assert.equal(api.load(), null);
 });

@@ -43,7 +43,7 @@ const authPath = path.join(gameDir, 'auth.dat');
 const credentials = createCredentialStore({ safeStorage, authPath });
 const keystoreUsable = () => credentials.keystoreUsable();
 const loadAuth = () => credentials.load();
-const saveAuth = (username, password, token) => credentials.save(username, password, token);
+const saveAuth = (record) => credentials.save(record);
 const clearAuth = () => credentials.clear();
 
 ipcMain.handle('auth:state', () => {
@@ -72,7 +72,12 @@ ipcMain.handle('auth:login', async (_e, payload) => {
   }
   if (r.status === 200 && r.json && r.json.ok) {
     const name = r.json.username || username;
-    saveAuth(name, password, r.json.token || null);
+    saveAuth({
+      username: name,
+      password,
+      token: r.json.token || null,
+      refreshToken: r.json.refreshToken || null,
+    });
     const cfg = loadConfig();
     saveConfig({ ...cfg, username: name });
     return { ok: true, username: name };
@@ -88,10 +93,43 @@ ipcMain.handle('auth:logout', async () => {
   return { ok: true };
 });
 
+/**
+ * Get a working session token again after the old one expired or was revoked.
+ *
+ * Prefers the refresh token, so the account password is not sent over the wire
+ * to stay logged in. Falls back to a password login only for installs that
+ * predate refresh tokens, or when the refresh token has been revoked - which is
+ * what the server does deliberately if it ever sees one replayed.
+ */
 async function refreshLauncherToken(a) {
+  if (a.refreshToken) {
+    const r = await pinnedPostJson('/api/launcher/refresh', { refreshToken: a.refreshToken });
+    if (r.status === 200 && r.json && r.json.ok && r.json.token) {
+      saveAuth({
+        username: r.json.username || a.username,
+        password: a.password,
+        token: r.json.token,
+        refreshToken: r.json.refreshToken || null,
+      });
+      return loadAuth();
+    }
+    // A network blip should not cost the user their stored refresh token; only
+    // a definitive rejection means it is worthless.
+    if (r.error) return null;
+    saveAuth({ username: a.username, password: a.password, token: null, refreshToken: null });
+    a = loadAuth();
+    if (!a) return null;
+  }
+
+  if (!a.password) return null;
   const r = await pinnedPostJson('/api/launcher/login', { username: a.username, password: a.password });
   if (r.status === 200 && r.json && r.json.ok && r.json.token) {
-    saveAuth(r.json.username || a.username, a.password, r.json.token);
+    saveAuth({
+      username: r.json.username || a.username,
+      password: a.password,
+      token: r.json.token,
+      refreshToken: r.json.refreshToken || null,
+    });
     return loadAuth();
   }
   return null;
