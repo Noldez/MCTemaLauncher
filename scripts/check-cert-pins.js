@@ -8,22 +8,19 @@
 // `pubkey`, which differs for ECDSA keys).
 const tls = require("tls");
 const crypto = require("crypto");
-const fs = require("fs");
-const path = require("path");
 
 // Overridable so the failure path itself can be exercised against a host we
 // deliberately do not pin.
 const HOST = process.env.PIN_CHECK_HOST || "mctema.lt";
 
-function pinsFromMain() {
-  const src = fs.readFileSync(path.join(__dirname, "..", "main.js"), "utf8");
-  const block = src.match(/const CERT_PINS = \[([\s\S]*?)\];/);
-  if (!block) throw new Error("could not find CERT_PINS in main.js");
-  return [...block[1].matchAll(/'([A-Za-z0-9+/=]{44})'/g)].map((m) => m[1]);
+// Imported rather than parsed out of the source: the pins used to live in
+// main.js, and when they moved this script silently stopped finding them.
+const { CERT_PINS: known } = require("../lib/pinned-http");
+if (!Array.isArray(known) || known.length === 0) {
+  console.error("lib/pinned-http.js exports no CERT_PINS");
+  process.exit(1);
 }
-
-const known = pinsFromMain();
-console.log(`main.js pins: ${known.length}`);
+console.log(`pinned keys: ${known.length}`);
 
 const sock = tls.connect({ host: HOST, port: 443, servername: HOST, timeout: 20000 }, () => {
   let cert = sock.getPeerCertificate(true);

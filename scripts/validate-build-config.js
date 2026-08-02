@@ -2,7 +2,11 @@
 // Validates the electron-builder "build" block against the schema shipped with
 // the installed electron-builder. A bad field here otherwise fails the release
 // workflow after a full packaging run, or worse, only on one platform's job.
-const Ajv = require("ajv");
+// ajv ships an ES-module-style default export that CommonJS sees as a wrapper
+// object under some versions; take the callable off it either way.
+/** @type {any} */
+const AjvModule = require("ajv");
+const Ajv = AjvModule.default || AjvModule;
 const scheme = require("../node_modules/app-builder-lib/scheme.json");
 const config = require("../package.json").build;
 

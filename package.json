@@ -13,7 +13,8 @@
     "download-jre-linux": "bash scripts/download-jre.sh",
     "dist-linux": "electron-builder --linux",
     "check-pins": "node scripts/check-cert-pins.js",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@xhayper/discord-rpc": "^1.3.4",
@@ -25,7 +26,8 @@
     "electron": "^43.2.0",
     "electron-builder": "^26.15.3",
     "eslint": "^10.8.0",
-    "fast-check": "^4.9.0"
+    "fast-check": "^4.9.0",
+    "typescript": "^7.0.2"
   },
   "build": {
     "appId": "lt.mctema.launcher",
