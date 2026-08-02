@@ -395,9 +395,9 @@ ipcMain.handle('discord:status', async () => {
   const now = Date.now();
   if (now - discordCache.at > 60000) {
     try {
-      const r = await fetch('https://mctema.lt/api/discord', { signal: AbortSignal.timeout(5000) });
-      if (r.ok) {
-        const j = await r.json();
+      const r = await pinnedApi('GET', '/api/discord', null, null);
+      if (!r.error && r.status === 200) {
+        const j = r.json || {};
         discordCache = { at: now, data: { online: j.online ?? null, invite: j.invite ?? null } };
       } else {
         discordCache = { at: now, data: { online: null, invite: null } };
@@ -419,23 +419,19 @@ ipcMain.handle('gallery:submit', async (_e, payload) => {
   try {
     const buf = fs.readFileSync(p);
     const type = /\.png$/i.test(p) ? 'image/png' : 'image/jpeg';
-    const form = new FormData();
-    form.append('nick', nick);
-    const category = String((payload && payload.category) || 'bendra');
-    if (/^[a-z]{3,24}$/.test(category)) form.append('category', category);
-    form.append('image', new Blob([buf], { type }), path.basename(p));
-    // Send the session token so the server credits the submission to the
-    // logged-in account instead of trusting the nick in the form body.
+    const rawCategory = String((payload && payload.category) || 'bendra');
+    const category = /^[a-z]{3,24}$/.test(rawCategory) ? rawCategory : 'bendra';
+    const name = path.basename(p);
+    // Session token so the server credits the submission to the logged-in
+    // account instead of trusting the nick in the form body. Sent through the
+    // pinned client: a bearer token must never travel on a connection that a
+    // mis-issued certificate could read.
     const a = loadAuth();
-    const r = await fetch(`${SITE_API}/gallery/submit`, {
-      method: 'POST',
-      body: form,
-      headers: a && a.token ? { Authorization: `Bearer ${a.token}` } : {},
-      signal: AbortSignal.timeout(15000),
-    });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) return { ok: false, error: j.error || 'Nepavyko pateikti.' };
-    return { ok: true };
+    if (!a || !a.token) return { ok: false, error: 'Prisijunk iš naujo.' };
+    const r = await pinnedUpload('/api/gallery/submit', a.token, { nick, category }, { name, type, buf });
+    if (r.error) return { ok: false, error: 'Nepavyko pasiekti mctema.lt.' };
+    if (r.status === 200 && r.json && r.json.ok !== false) return { ok: true };
+    return { ok: false, error: (r.json && r.json.error) || 'Nepavyko pateikti.' };
   } catch {
     return { ok: false, error: 'Nepavyko pasiekti mctema.lt.' };
   }
@@ -449,14 +445,10 @@ ipcMain.handle('gallery:vote', async (_e, payload) => {
     return { ok: false };
   }
   try {
-    const r = await fetch(`${SITE_API}/gallery/${id}/vote`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nick, value }),
-      signal: AbortSignal.timeout(8000),
-    });
-    if (r.ok) featuredCache.at = 0;
-    return { ok: r.ok };
+    const r = await pinnedApi('POST', `/api/gallery/${id}/vote`, { nick, value });
+    const ok = !r.error && r.status === 200;
+    if (ok) featuredCache.at = 0;
+    return { ok };
   } catch {
     return { ok: false };
   }
@@ -467,9 +459,9 @@ ipcMain.handle('gallery:featured', async () => {
   const now = Date.now();
   if (now - featuredCache.at > 60000) {
     try {
-      const r = await fetch(`${SITE_API}/gallery/featured`, { signal: AbortSignal.timeout(5000) });
-      if (r.ok) {
-        const rows = await r.json();
+      const r = await pinnedApi('GET', '/api/gallery/featured', null, null);
+      if (!r.error && r.status === 200) {
+        const rows = r.json;
         featuredCache = {
           at: now,
           data: (Array.isArray(rows) ? rows : []).map((x) => ({
@@ -509,7 +501,46 @@ const SODIUM_PROJECT_ID = 'AANobbMI';
 
 function omodPackVersion(v) {
   const file = v.files.find((f) => f.primary) || v.files[0];
-  return { version: v.version_number, url: file.url, size: file.size, filename: file.filename };
+  // hashes are carried through so the download can be verified against what
+  // the API said it would be, rather than against itself.
+  return {
+    version: v.version_number, url: file.url, size: file.size,
+    filename: file.filename, hashes: file.hashes || null,
+  };
+}
+
+/**
+ * Download an optional mod and prove it is the file Modrinth described.
+ * Returns the buffer, or null if anything about it is wrong.
+ *
+ * These jars are handed to Fabric and run as code inside the game, so an
+ * unverified download is arbitrary code execution. Modrinth publishes sha512
+ * for every file; we refuse anything that does not match.
+ */
+async function downloadVerifiedMod(file) {
+  try {
+    if (!file || typeof file.url !== 'string') return null;
+    // Never let an API response redirect us off Modrinth or down to cleartext.
+    const u = new URL(file.url);
+    if (u.protocol !== 'https:' || u.hostname !== 'cdn.modrinth.com') return null;
+
+    const algo = file.hashes && file.hashes.sha512 ? 'sha512' : file.hashes && file.hashes.sha1 ? 'sha1' : null;
+    if (!algo) return null;
+    const expected = String(file.hashes[algo]).toLowerCase();
+
+    const r = await fetch(u.href, { redirect: 'error', signal: AbortSignal.timeout(60000) });
+    if (!r.ok) return null;
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (!buf.length || buf.length > 64 * 1024 * 1024) return null;
+    // Same shape check the local-file path applies: it must be a zip/jar.
+    if (buf[0] !== 0x50 || buf[1] !== 0x4b) return null;
+
+    const got = crypto.createHash(algo).update(buf).digest('hex');
+    if (got !== expected) return null;
+    return buf;
+  } catch {
+    return null;
+  }
 }
 
 async function omodFetchInfo() {
@@ -605,9 +636,8 @@ ipcMain.handle('omods:addModrinth', async (_e, payload) => {
     const v = versions.find((x) => x.version_type === 'release') || versions[0];
     if (!v) return { ok: false, error: 'Nėra versijos 1.21.11 Fabric.' };
     const file = v.files.find((f) => f.primary) || v.files[0];
-    const r = await fetch(file.url, { signal: AbortSignal.timeout(60000) });
-    if (!r.ok) return { ok: false, error: 'Atsisiuntimas nepavyko.' };
-    const buf = Buffer.from(await r.arrayBuffer());
+    const buf = await downloadVerifiedMod(file);
+    if (!buf) return { ok: false, error: 'Atsisiuntimas nepavyko arba failas neatitinka kontrolinės sumos.' };
     fs.mkdirSync(optionalDir, { recursive: true });
     const fname = `${slug}.jar`;
     fs.writeFileSync(path.join(optionalDir, fname), buf);
@@ -673,9 +703,8 @@ ipcMain.handle('omods:toggle', async (_e, payload) => {
     const info = (await omodFetchInfo())[id];
     if (!info) return { ok: false, error: 'Modas nepasiekiamas - patikrink internetą.' };
     try {
-      const r = await fetch(info.url, { signal: AbortSignal.timeout(60000) });
-      if (!r.ok) return { ok: false, error: 'Atsisiuntimas nepavyko.' };
-      const buf = Buffer.from(await r.arrayBuffer());
+      const buf = await downloadVerifiedMod(info);
+      if (!buf) return { ok: false, error: 'Atsisiuntimas nepavyko arba failas neatitinka kontrolinės sumos.' };
       fs.mkdirSync(optionalDir, { recursive: true });
       const file = `${id}.jar`;
       fs.writeFileSync(path.join(optionalDir, file), buf);
@@ -795,10 +824,11 @@ ipcMain.handle('game:play', async (_e, payload) => {
     log(`Paleidziamas Minecraft ${MC_VERSION} kaip ${username} (${ram}G)...`);
     const auth = loadAuth();
     if (auth && auth.username.toLowerCase() === username.toLowerCase()) {
-      process.env.MCTEMA_PASS = auth.password;
+      // Scoped to the game process; never placed in our own environment, where
+      // every child spawned while preparing the launch would inherit it.
+      opts.overrides = { ...(opts.overrides || {}), env: { MCTEMA_PASS: auth.password } };
     }
     await launcher.launch(opts);
-    delete process.env.MCTEMA_PASS;
     sessionStart = Date.now();
     send('mc:launched', true);
     setRpc('Zaidzia Minecraft', SERVER.host, true);
@@ -806,7 +836,6 @@ ipcMain.handle('game:play', async (_e, payload) => {
     if (cfg.closeOnPlay && win && !win.isDestroyed()) win.hide();
     return { ok: true };
   } catch (err) {
-    delete process.env.MCTEMA_PASS;
     launching = false;
     log('Paleidimas nepavyko: ' + String((err && err.message) || err));
     return { ok: false, error: String((err && err.message) || err) };

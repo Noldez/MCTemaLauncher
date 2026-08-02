@@ -72,9 +72,27 @@ test('buildMultipart encodes fields, filename and payload', () => {
   assert.ok(body.includes(Buffer.from([1, 2, 3])), 'raw bytes preserved');
 });
 
-test('buildMultipart strips quotes that would break the filename header', () => {
-  const { body } = buildMultipart({}, { name: 'a"b".png', type: 'image/png', buf: Buffer.alloc(0) });
-  assert.ok(body.toString().includes('filename="ab.png"'));
+test('buildMultipart neutralises anything that could break out of a header', () => {
+  // A quote would end the filename attribute early; CR/LF would let the value
+  // forge a whole extra part, since the body is built by concatenation.
+  const hostile = 'a"b\r\nContent-Disposition: form-data; name="nick"\r\n\r\nattacker\r\n.png';
+  const { body } = buildMultipart(
+    { to: 'ZooH_\r\nX-Injected: yes' },
+    { name: hostile, type: 'image/png\r\nX-Also: no', buf: Buffer.alloc(0) },
+  );
+  const text = body.toString('latin1');
+
+  // The hostile text may survive as literal characters inside a value - that is
+  // harmless. What must not happen is it becoming a line of its own, which is
+  // what would forge a header or a new part.
+  const headerLines = text.split('\r\n').filter((l) => /^Content-Disposition|^Content-Type/.test(l));
+  assert.equal(headerLines.length, 3, 'exactly one disposition per part plus one content type');
+  assert.ok(!/\r\nX-Injected/.test(text), 'field value cannot start a new header line');
+  assert.ok(!/\r\nX-Also/.test(text), 'content type cannot start a new header line');
+  assert.ok(!/name="nick"/.test(text), 'filename cannot forge an extra part');
+  assert.ok(/filename="[A-Za-z0-9._-]+"/.test(text), 'filename reduced to safe characters');
+  // Exactly two parts: the field and the file.
+  assert.equal(text.split('Content-Disposition: form-data').length - 1, 2);
 });
 
 // The property that matters most: a server presenting an unpinned certificate
