@@ -899,18 +899,17 @@ ipcMain.handle('game:play', async (_e, payload) => {
       // separate token that reaches the presence beat and nothing else, so the
       // worst it buys a thief is looking like they are playing.
       const [gameToken, ticket] = await Promise.all([mintGameToken(), mintLoginTicket()]);
-      // Both, for now. The mod asks the server which it accepts and only ever
-      // uses the ticket where the server says it can redeem one, so a server
-      // and a launcher that update at different times still auto-login.
+      // The account password does not go in here, and must not be put back.
+      // Everything loaded into that JVM can read this environment, mods we did
+      // not write included, and the launcher lets a player install any jar they
+      // like. A ticket is spent the moment the server redeems it and could only
+      // ever have logged in this one nick, so finding it there is worth nothing.
       //
-      // ONCE THE SERVER PLUGIN WITH TICKET SUPPORT IS LIVE EVERYWHERE, DELETE
-      // THE MCTEMA_PASS LINE BELOW. That deletion is the actual security win:
-      // until then the password is still sitting in the game's environment,
-      // where every mod in that JVM can read it.
-      const secret = {
-        MCTEMA_PASS: auth.password,
-        ...(ticket ? { MCTEMA_TICKET: ticket } : {}),
-      };
+      // If the ticket cannot be minted the game still starts; the player types
+      // /login themselves that once. That is the right trade against leaving a
+      // password where anything can read it.
+      const secret = ticket ? { MCTEMA_TICKET: ticket } : {};
+      if (!ticket) log('Nepavyko gauti prisijungimo bilieto - prisijunk su /login.');
       // Scoped to the game process; never placed in our own environment, where
       // every child spawned while preparing the launch would inherit it.
       opts.overrides = {
