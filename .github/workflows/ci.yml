@@ -22,6 +22,12 @@ jobs:
       - run: npm test
       - name: Validate electron-builder config
         run: node scripts/validate-build-config.js
+      # Early warning only: Cloudflare picks our edge CA, so if it changes,
+      # pinned clients break and this is where we find out. Non-blocking,
+      # because a network hiccup on a runner must not fail unrelated PRs.
+      - name: Check certificate pins against live site
+        run: npm run check-pins
+        continue-on-error: true
       - name: Syntax check
         run: |
           for f in main.js preload.js toast-preload.js renderer/renderer.js renderer/toast.js renderer/views/*.js; do
