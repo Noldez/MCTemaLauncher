@@ -2,11 +2,15 @@ const { app, BrowserWindow, ipcMain, shell, clipboard, nativeImage, safeStorage 
 const path = require('path');
 const fs = require('fs');
 const net = require('net');
-const https = require('https');
 const crypto = require('crypto');
 const { pathToFileURL } = require('url');
 const { Client } = require('./lib/mclc');
 const { writeVarInt, readVarInt, offlineUUID } = require('./lib/protocol');
+const {
+  postJson: pinnedPostJson,
+  apiRequest: pinnedApi,
+  upload: pinnedUpload,
+} = require('./lib/pinned-http');
 const { autoUpdater } = require('electron-updater');
 
 // Software WebGL fallback for GPU-less machines (VMs, blocklisted drivers);
@@ -40,25 +44,6 @@ function saveConfig(cfg) {
   try { fs.writeFileSync(configPath, JSON.stringify(cfg, null, 2)); } catch {}
 }
 
-const WEBSITE_HOST = 'mctema.lt';
-// Public key pins for mctema.lt. Cloudflare issues our edge certificate, and
-// which CA it picks is their decision, not ours - so Let's Encrypt is pinned as
-// a backup alongside the Google chain we are served today. Without it, a CA
-// switch on Cloudflare's side would lock every player out at once.
-//
-// Roots are pinned rather than intermediates: they outlive intermediates by
-// years, and the chain walk in pinnedApi() checks every certificate it is sent.
-// Regenerate with `npm run check-pins` - do NOT copy pin values from a CA's
-// website, since those are SPKI digests and this code hashes Node's `pubkey`
-// field, which differs for ECDSA keys.
-const CERT_PINS = [
-  'H7AMYAvicN2+UcFPBz3kJXCDmGrTItZh4ujUBK8hoWg=', // GTS WE1 (current issuer)
-  'YSoUL4CBzo5aJ/ES9gSZTsavsgtHsiLLnTG+BKUdork=', // GTS Root R4
-  'C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=', // ISRG Root X1 (Let's Encrypt, RSA)
-  '+QHt0j1IgBr88CsiSG197KRsbAlprQDohcvoe1Za45Y=', // ISRG Root X2 (Let's Encrypt, ECDSA)
-  'fk6IOKit1ild5647BH06ujSIq5XbCgqlbYl6ANhhi88=', // ISRG Root YR (Let's Encrypt, newer hierarchy)
-  'o8gmWo6hTNA1Y/ybI8g6rlbzT1YElMY4ivrLbjg5fyE=', // ISRG Root YE (Let's Encrypt, newer hierarchy)
-];
 const authPath = path.join(gameDir, 'auth.dat');
 
 // On Linux, isEncryptionAvailable() also returns true for the `basic_text`
@@ -86,50 +71,6 @@ function saveAuth(username, password, token) {
 
 function clearAuth() {
   try { fs.rmSync(authPath, { force: true }); } catch {}
-}
-
-function pinnedPostJson(reqPath, body) {
-  return new Promise((resolve) => {
-    const data = Buffer.from(JSON.stringify(body), 'utf8');
-    let pinned = false;
-    const req = https.request({
-      host: WEBSITE_HOST, port: 443, method: 'POST', path: reqPath,
-      servername: WEBSITE_HOST, rejectUnauthorized: true, minVersion: 'TLSv1.2',
-      agent: false,
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': data.length,
-        'User-Agent': 'MCTemaLauncher',
-      },
-    }, (res) => {
-      let buf = '';
-      res.setEncoding('utf8');
-      res.on('data', (c) => { buf += c; });
-      res.on('end', () => {
-        if (!pinned) { resolve({ error: 'PIN' }); return; }
-        try { resolve({ status: res.statusCode, json: JSON.parse(buf || '{}') }); }
-        catch { resolve({ error: 'BAD_RESPONSE' }); }
-      });
-    });
-    req.on('socket', (s) => s.on('secureConnect', () => {
-      try {
-        let cert = s.getPeerCertificate(true);
-        const seen = new Set();
-        while (cert && cert.pubkey && !seen.has(cert.fingerprint256)) {
-          seen.add(cert.fingerprint256);
-          const pin = crypto.createHash('sha256').update(cert.pubkey).digest('base64');
-          if (CERT_PINS.includes(pin)) { pinned = true; break; }
-          if (!cert.issuerCertificate || cert.issuerCertificate === cert) break;
-          cert = cert.issuerCertificate;
-        }
-      } catch {}
-      if (!pinned) req.destroy(new Error('certificate pin mismatch'));
-    }));
-    req.on('error', () => resolve({ error: 'NETWORK' }));
-    req.setTimeout(20000, () => req.destroy(new Error('timeout')));
-    req.write(data);
-    req.end();
-  });
 }
 
 function authErrText(r) {
@@ -184,48 +125,6 @@ ipcMain.handle('auth:logout', async () => {
   clearAuth();
   return { ok: true };
 });
-
-function pinnedApi(method, reqPath, body, token) {
-  return new Promise((resolve) => {
-    const data = body ? Buffer.from(JSON.stringify(body), 'utf8') : null;
-    let pinned = false;
-    const headers = { 'User-Agent': 'MCTemaLauncher' };
-    if (token) headers.Authorization = `Bearer ${token}`;
-    if (data) { headers['Content-Type'] = 'application/json'; headers['Content-Length'] = data.length; }
-    const req = https.request({
-      host: WEBSITE_HOST, port: 443, method, path: reqPath,
-      servername: WEBSITE_HOST, rejectUnauthorized: true, minVersion: 'TLSv1.2',
-      agent: false, headers,
-    }, (res) => {
-      let buf = '';
-      res.setEncoding('utf8');
-      res.on('data', (c) => { buf += c; });
-      res.on('end', () => {
-        if (!pinned) { resolve({ error: 'PIN' }); return; }
-        try { resolve({ status: res.statusCode, json: JSON.parse(buf || '{}') }); }
-        catch { resolve({ error: 'BAD_RESPONSE' }); }
-      });
-    });
-    req.on('socket', (s) => s.on('secureConnect', () => {
-      try {
-        let cert = s.getPeerCertificate(true);
-        const seen = new Set();
-        while (cert && cert.pubkey && !seen.has(cert.fingerprint256)) {
-          seen.add(cert.fingerprint256);
-          const pin = crypto.createHash('sha256').update(cert.pubkey).digest('base64');
-          if (CERT_PINS.includes(pin)) { pinned = true; break; }
-          if (!cert.issuerCertificate || cert.issuerCertificate === cert) break;
-          cert = cert.issuerCertificate;
-        }
-      } catch {}
-      if (!pinned) req.destroy(new Error('certificate pin mismatch'));
-    }));
-    req.on('error', () => resolve({ error: 'NETWORK' }));
-    req.setTimeout(15000, () => req.destroy(new Error('timeout')));
-    if (data) req.write(data);
-    req.end();
-  });
-}
 
 async function refreshLauncherToken(a) {
   const r = await pinnedPostJson('/api/launcher/login', { username: a.username, password: a.password });
@@ -288,59 +187,6 @@ ipcMain.handle('chat:history', (_e, p) => {
 ipcMain.handle('chat:send', (_e, p) => friendsApi('POST', '/api/launcher/messages', {
   to: String((p && p.to) || ''), body: String((p && p.body) || '').slice(0, 1000),
 }));
-
-function pinnedUpload(reqPath, token, fields, file) {
-  return new Promise((resolve) => {
-    const boundary = '----mctema' + crypto.randomBytes(12).toString('hex');
-    const parts = [];
-    for (const [k, v] of Object.entries(fields)) {
-      parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${k}"\r\n\r\n${v}\r\n`));
-    }
-    parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="image"; filename="${file.name.replace(/"/g, '')}"\r\nContent-Type: ${file.type}\r\n\r\n`));
-    parts.push(file.buf);
-    parts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
-    const data = Buffer.concat(parts);
-    let pinned = false;
-    const req = https.request({
-      host: WEBSITE_HOST, port: 443, method: 'POST', path: reqPath,
-      servername: WEBSITE_HOST, rejectUnauthorized: true, minVersion: 'TLSv1.2',
-      agent: false,
-      headers: {
-        'User-Agent': 'MCTemaLauncher',
-        Authorization: `Bearer ${token}`,
-        'Content-Type': `multipart/form-data; boundary=${boundary}`,
-        'Content-Length': data.length,
-      },
-    }, (res) => {
-      let buf = '';
-      res.setEncoding('utf8');
-      res.on('data', (c) => { buf += c; });
-      res.on('end', () => {
-        if (!pinned) { resolve({ error: 'PIN' }); return; }
-        try { resolve({ status: res.statusCode, json: JSON.parse(buf || '{}') }); }
-        catch { resolve({ error: 'BAD_RESPONSE' }); }
-      });
-    });
-    req.on('socket', (s) => s.on('secureConnect', () => {
-      try {
-        let cert = s.getPeerCertificate(true);
-        const seen = new Set();
-        while (cert && cert.pubkey && !seen.has(cert.fingerprint256)) {
-          seen.add(cert.fingerprint256);
-          const pin = crypto.createHash('sha256').update(cert.pubkey).digest('base64');
-          if (CERT_PINS.includes(pin)) { pinned = true; break; }
-          if (!cert.issuerCertificate || cert.issuerCertificate === cert) break;
-          cert = cert.issuerCertificate;
-        }
-      } catch {}
-      if (!pinned) req.destroy(new Error('certificate pin mismatch'));
-    }));
-    req.on('error', () => resolve({ error: 'NETWORK' }));
-    req.setTimeout(30000, () => req.destroy(new Error('timeout')));
-    req.write(data);
-    req.end();
-  });
-}
 
 ipcMain.handle('chat:sendImage', async (_e, p) => {
   const to = String((p && p.to) || '');
