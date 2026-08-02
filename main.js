@@ -164,6 +164,23 @@ async function mintGameToken() {
   }
 }
 
+/**
+ * A one-shot stand-in for the account password, for the auto-login handshake.
+ *
+ * The game process runs mods we did not write and they can all read its
+ * environment, so what goes in there should be worth as little as possible. A
+ * ticket is spent the moment the server redeems it and could only ever have
+ * logged in this one nick.
+ */
+async function mintLoginTicket() {
+  try {
+    const r = await friendsApi('POST', '/api/launcher/login-ticket');
+    return r && r.ok && typeof r.ticket === 'string' ? r.ticket : null;
+  } catch {
+    return null;
+  }
+}
+
 async function friendsApi(method, apiPath, body) {
   let a = loadAuth();
   if (!a) return { ok: false, error: 'Prisijunk iš naujo.' };
@@ -229,7 +246,7 @@ ipcMain.handle('chat:sendImage', async (_e, p) => {
 
 const MOD_HASHES = {
   'fabric-api.jar': 'bdff7fd7e220085cfad2ff9b1f40dde6534ae0b96cf378f97a374bc54cb9ed0f',
-  'mctemaclient.jar': '80bfb99455ada3bd25ba7baa126a265622087fa05cde33ce9cfc03d9e4b4b835',
+  'mctemaclient.jar': '3192c69c107ccb54ae0af56e8206848fef3c5e0a68c5f4371e30eb9061b4bce7',
 };
 
 const resolveJava = () => resolveBundledJava({
@@ -881,12 +898,24 @@ ipcMain.handle('game:play', async (_e, payload) => {
       // JVM, and any of them can read this environment. What goes in is a
       // separate token that reaches the presence beat and nothing else, so the
       // worst it buys a thief is looking like they are playing.
-      const gameToken = await mintGameToken();
+      const [gameToken, ticket] = await Promise.all([mintGameToken(), mintLoginTicket()]);
+      // Both, for now. The mod asks the server which it accepts and only ever
+      // uses the ticket where the server says it can redeem one, so a server
+      // and a launcher that update at different times still auto-login.
+      //
+      // ONCE THE SERVER PLUGIN WITH TICKET SUPPORT IS LIVE EVERYWHERE, DELETE
+      // THE MCTEMA_PASS LINE BELOW. That deletion is the actual security win:
+      // until then the password is still sitting in the game's environment,
+      // where every mod in that JVM can read it.
+      const secret = {
+        MCTEMA_PASS: auth.password,
+        ...(ticket ? { MCTEMA_TICKET: ticket } : {}),
+      };
       // Scoped to the game process; never placed in our own environment, where
       // every child spawned while preparing the launch would inherit it.
       opts.overrides = {
         ...(opts.overrides || {}),
-        env: { MCTEMA_PASS: auth.password, ...(gameToken ? { MCTEMA_TOKEN: gameToken } : {}) },
+        env: { ...secret, ...(gameToken ? { MCTEMA_TOKEN: gameToken } : {}) },
       };
     }
     await launcher.launch(opts);
