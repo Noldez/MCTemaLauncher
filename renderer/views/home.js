@@ -44,7 +44,7 @@
     charViewer.zoom = 0.62;
     charViewer.autoRotate = true;
     charViewer.autoRotateSpeed = 0.6;
-    let anim = null;
+    let anim;
     try {
       const Pose = class extends skinview3d.PlayerAnimation {
         animate(player) {

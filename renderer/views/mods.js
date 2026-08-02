@@ -1,7 +1,7 @@
 (() => {
   const { $, el } = window.ui;
   let q = '';
-  let busy = new Set();
+  const busy = new Set();
 
   const REQ_META = {
     'mctemaclient.jar': { name: 'MC Tema Client', author: 'ただし', discord: 'noldez', desc: 'Oficialus klientas - apsauga ir auto-login' },

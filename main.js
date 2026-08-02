@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, clipboard, nativeImage, safeStorage, Notification } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, clipboard, nativeImage, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const net = require('net');
@@ -992,7 +992,7 @@ ipcMain.handle('omods:addModrinth', async (_e, payload) => {
 
 ipcMain.handle('omods:addLocal', (_e, payload) => {
   const rawName = String((payload && payload.name) || 'modas.jar');
-  const name = rawName.replace(/[^A-Za-z0-9._\-]/g, '_').slice(0, 64);
+  const name = rawName.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 64);
   if (!name.endsWith('.jar')) return { ok: false, error: 'Tik .jar failai.' };
   let buf;
   try { buf = Buffer.from(String((payload && payload.data) || ''), 'base64'); } catch { buf = null; }
