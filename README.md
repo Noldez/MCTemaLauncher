@@ -74,15 +74,54 @@ So players can verify what the launcher does. It talks only to `mctema.lt`, offi
 
 Found something off? See [SECURITY.md](SECURITY.md).
 
+## Troubleshooting
+
+**Windows warns about the file.** See [Windows SmartScreen](#verify-your-download) above. The installer is not code-signed yet, so fresh builds have no reputation. Verify the checksum and the VirusTotal scan, then choose "More info" and "Run anyway".
+
+**Linux: `dlopen(): error loading libfuse.so.2`.** Kali, newer Ubuntu and Arch no longer ship FUSE 2, which the AppImage needs in order to mount itself. Either install the `.deb` instead, which does not use FUSE at all, or run the AppImage so it unpacks itself (note the double dash):
+
+```bash
+./MCTemaLauncher-*.AppImage --appimage-extract-and-run
+```
+
+**Linux: "Nerasta saugi raktinė (gnome-keyring arba kwallet)".** No secret service is running, so there is nowhere safe to keep your password. The launcher refuses rather than falling back to Chromium's `basic_text` backend, which "encrypts" with a key anyone can look up. Install and start `gnome-keyring` or `kwallet`; the `.deb` already pulls in `libsecret`. Standard desktops have one running.
+
+**The 3D character does not appear.** Virtual machines usually have no GPU, and their virtual display adapters are on Chromium's WebGL blocklist. Since v0.2.12 the launcher falls back to software rendering, and to a flat 2D skin if even that is unavailable. Everything else works normally either way.
+
+**"Nepavyko pasiekti mctema.lt".** A network hiccup, common on VM NAT or right after waking from sleep. Read-only requests retry automatically; press refresh if it persists.
+
+**"Saugumo klaida: nepatikimas sertifikatas".** The launcher pins the public keys behind `mctema.lt` and refused a certificate that did not match. This is what it looks like when something is intercepting the connection, so treat it seriously: check whether you are on a network that inspects traffic (some corporate or school wifi), and if you are not, please [report it](SECURITY.md). It can also mean our certificate authority changed and the pins need updating, which is our bug, not yours.
+
+**Updating the Linux `.deb` asks for a password.** Installing a `.deb` requires root, so the updater elevates. The AppImage updates without any prompt.
+
 ## Development
 
-```
+```bash
 npm install
-npm run download-jre   # fetch Temurin JRE 21 into assets/jre
+npm run download-jre         # Temurin JRE 21 into assets/jre (Windows)
+npm run download-jre-linux   # same, for Linux builds
 npm start
 ```
 
-Build the Windows installer with `npm run dist` (NSIS, output in `build/`). Game files live in `%APPDATA%\.mctema`.
+Everything CI runs, which is also what a pull request needs to pass:
+
+```bash
+npm run lint         # ESLint
+npm test             # node --test
+npm run typecheck    # tsc --noEmit over lib/ and scripts/
+npm run check-pins   # verify mctema.lt still matches a pinned certificate
+```
+
+Packaging, output in `build/`:
+
+```bash
+npm run dist         # Windows installer (NSIS)
+npm run dist-linux   # Linux AppImage and .deb
+```
+
+Layout: `main.js` is the Electron main process, `preload.js` the bridge, `renderer/` the UI, and `lib/` holds the logic worth testing on its own (certificate-pinned HTTP, credentials, config, mod staging, server ping). `lib/mclc/` is a vendored fork of minecraft-launcher-core and is deliberately left close to upstream.
+
+Game files live in `%APPDATA%\.mctema` on Windows and `~/.config/.mctema` on Linux.
 
 Contributions welcome - see [CONTRIBUTING.md](CONTRIBUTING.md).
 
