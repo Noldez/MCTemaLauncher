@@ -1,6 +1,6 @@
 {
   "name": "mctema-launcher",
-  "version": "0.2.12",
+  "version": "0.2.13",
   "description": "MC Tema Minecraft launcher - offline mode, auto-connect to play.mctema.lt (1.21.11)",
   "main": "main.js",
   "author": "ただし (Discord: noldez)",
