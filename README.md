@@ -46,20 +46,27 @@ The installer is not yet code-signed ([#5](https://github.com/Noldez/MCTemaLaunc
 
 ## Linux
 
-Download the `.AppImage` from [releases](https://github.com/Noldez/MCTemaLauncher/releases/latest), then:
+**Debian, Ubuntu, Kali, Mint** - install the `.deb` from [releases](https://github.com/Noldez/MCTemaLauncher/releases/latest). This is the recommended route: it needs no FUSE and adds a normal menu entry.
+
+```bash
+sudo apt install ./MCTemaLauncher-*.deb
+mctema-launcher
+```
+
+**Everything else** - the `.AppImage`:
 
 ```bash
 chmod +x MCTemaLauncher-*.AppImage
 ./MCTemaLauncher-*.AppImage
 ```
 
-If your distro has no FUSE 2 (Kali, newer Arch/Ubuntu), run it without FUSE:
+Distros that dropped FUSE 2 (Kali, newer Arch/Ubuntu) need the AppImage to unpack itself instead of mounting. Note the double dash:
 
 ```bash
 ./MCTemaLauncher-*.AppImage --appimage-extract-and-run
 ```
 
-Credential storage needs a secret service (gnome-keyring or kwallet) - present on standard desktops.
+Credential storage needs a secret service (gnome-keyring or kwallet). The `.deb` pulls in `libsecret`; on a minimal desktop without a keyring daemon the launcher will say so rather than store your password unprotected.
 
 ## Why open source
 
