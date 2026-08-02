@@ -9,6 +9,10 @@ const { Client } = require('./lib/mclc');
 const { writeVarInt, readVarInt, offlineUUID } = require('./lib/protocol');
 const { autoUpdater } = require('electron-updater');
 
+// Software WebGL fallback for GPU-less machines (VMs, blocklisted drivers);
+// only used when hardware WebGL fails, renderer loads local UI only.
+app.commandLine.appendSwitch('enable-unsafe-swiftshader');
+
 const SERVER = { host: 'play.mctema.lt', port: 25565 };
 const MC_VERSION = '1.21.11';
 const FABRIC_LOADER = '0.19.3';
@@ -220,6 +224,11 @@ async function friendsApi(method, apiPath, body) {
     if (!a) return { ok: false, error: 'Prisijunk iš naujo.' };
   }
   let r = await pinnedApi(method, apiPath, body, a.token);
+  if (r.error === 'NETWORK' && method === 'GET') {
+    // transient DNS/socket blips (VM NAT, waking from sleep) - retry reads once
+    await new Promise((res) => setTimeout(res, 700));
+    r = await pinnedApi(method, apiPath, body, a.token);
+  }
   if (r.status === 401) {
     const fresh = await refreshLauncherToken(a);
     if (!fresh) return { ok: false, error: 'Prisijunk iš naujo.' };

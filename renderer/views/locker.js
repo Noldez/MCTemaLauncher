@@ -1,13 +1,18 @@
 (() => {
   const { $, el, fmtAgo } = window.ui;
-  let viewer = null, data = { current: null, skins: [] };
+  let viewer = null, flat = null, data = { current: null, skins: [] };
 
   function ensureViewer() {
-    if (viewer || !window.skinview3d) return;
-    viewer = new skinview3d.SkinViewer({ canvas: $('lk-canvas'), width: 260, height: 400 });
-    viewer.controls.enableZoom = false;
-    viewer.animation = new skinview3d.WalkingAnimation();
-    viewer.animation.speed = 0.6;
+    if (viewer || flat || !window.skinview3d) return;
+    try {
+      viewer = new skinview3d.SkinViewer({ canvas: $('lk-canvas'), width: 260, height: 400 });
+      viewer.controls.enableZoom = false;
+      viewer.animation = new skinview3d.WalkingAnimation();
+      viewer.animation.speed = 0.6;
+    } catch {
+      viewer = null;
+      flat = window.ui.swapCanvas($('lk-canvas'), 260, 400);
+    }
   }
 
   async function load() {
@@ -15,10 +20,13 @@
     ensureViewer();
     const cur = data.skins.find((s) => s.id === data.current);
     $('lk-viewer-hint').classList.add('hidden');
+    const nick = (window.ui.state.cfg && window.ui.state.cfg.username) || 'MHF_Steve';
+    const url = cur ? cur.url : `https://mc-heads.net/skin/${encodeURIComponent(nick)}`;
+    const model = cur && cur.variant === 'slim' ? 'slim' : 'default';
     if (viewer) {
-      const nick = (window.ui.state.cfg && window.ui.state.cfg.username) || 'MHF_Steve';
-      if (cur) viewer.loadSkin(cur.url, { model: cur.variant === 'slim' ? 'slim' : 'default' });
-      else viewer.loadSkin(`https://mc-heads.net/skin/${encodeURIComponent(nick)}`).catch(() => $('lk-viewer-hint').classList.remove('hidden'));
+      viewer.loadSkin(url, { model }).catch(() => $('lk-viewer-hint').classList.remove('hidden'));
+    } else if (flat) {
+      window.ui.flatSkin(flat, url, model).catch(() => $('lk-viewer-hint').classList.remove('hidden'));
     }
     renderRows();
   }

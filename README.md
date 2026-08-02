@@ -13,7 +13,7 @@ Official desktop launcher for the [MC Tema](https://mctema.lt) Minecraft server 
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Noldez/MCTemaLauncher/badge)](https://scorecard.dev/viewer/?uri=github.com/Noldez/MCTemaLauncher)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13924/badge)](https://www.bestpractices.dev/projects/13924)
 [![License](https://img.shields.io/github/license/Noldez/MCTemaLauncher)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows-0078d4)](https://mctema.lt)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-0078d4)](https://mctema.lt)
 
 **[Download for players -> mctema.lt](https://mctema.lt)**
 
@@ -24,7 +24,7 @@ Official desktop launcher for the [MC Tema](https://mctema.lt) Minecraft server 
 ## Features
 
 - **One-click play** - installs Minecraft 1.21.11 + Fabric with a bundled Java 21 runtime and joins the server automatically
-- **MC Tema account login** - credentials verified over certificate-pinned TLS, stored encrypted with Windows DPAPI
+- **MC Tema account login** - credentials verified over certificate-pinned TLS, stored encrypted with the OS keystore (Windows DPAPI / Linux libsecret)
 - **Friends & chat** - live presence, direct messages with image support, launcher-native notifications
 - **Screenshot gallery** - browse local shots, submit the best ones to the community gallery on mctema.lt
 - **Skin locker** - local skin collection with live 3D preview
@@ -43,6 +43,23 @@ SHA-256  f4008fa041599eec0f66ce30dbef184cc669358aacd0814f02378172467c1aac
 - [GitHub releases](https://github.com/Noldez/MCTemaLauncher/releases) are built from this source by a public workflow; each exe ships with `SHA256SUMS.txt` and a signed provenance attestation you can check with `gh attestation verify <exe> --repo Noldez/MCTemaLauncher`
 
 The installer is not yet code-signed ([#5](https://github.com/Noldez/MCTemaLauncher/issues/5)), so Windows SmartScreen may warn on first run - the checksum and scan above are how you verify authenticity until then.
+
+## Linux
+
+Download the `.AppImage` from [releases](https://github.com/Noldez/MCTemaLauncher/releases/latest), then:
+
+```bash
+chmod +x MCTemaLauncher-*.AppImage
+./MCTemaLauncher-*.AppImage
+```
+
+If your distro has no FUSE 2 (Kali, newer Arch/Ubuntu), run it without FUSE:
+
+```bash
+./MCTemaLauncher-*.AppImage --appimage-extract-and-run
+```
+
+Credential storage needs a secret service (gnome-keyring or kwallet) - present on standard desktops.
 
 ## Why open source
 

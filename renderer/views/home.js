@@ -12,50 +12,62 @@
 
 
   let charViewer = null;
+  let charFlat = null;
   let charKey = '';
 
   async function loadChar() {
     if (!window.skinview3d) return;
-    if (!charViewer) {
-      charViewer = new skinview3d.SkinViewer({ canvas: $('home-char'), width: 210, height: 320 });
-      charViewer.controls.enableZoom = false;
-      charViewer.zoom = 0.62;
-      charViewer.autoRotate = true;
-      charViewer.autoRotateSpeed = 0.6;
-      let anim = null;
+    if (!charViewer && !charFlat) {
       try {
-        const Pose = class extends skinview3d.PlayerAnimation {
-          animate(player) {
-            const t = this.progress * 1.4;
-            const s = player.skin;
-            s.leftArm.rotation.z = 0.4 + Math.sin(t) * 0.05;
-            s.rightArm.rotation.z = -0.4 - Math.sin(t + 0.6) * 0.05;
-            s.leftArm.rotation.x = -0.15;
-            s.rightArm.rotation.x = -0.15;
-            s.leftLeg.rotation.x = 0.5 + Math.sin(t * 0.9) * 0.06;
-            s.rightLeg.rotation.x = -0.2 - Math.sin(t * 0.9) * 0.06;
-            s.leftLeg.rotation.z = 0.12;
-            s.rightLeg.rotation.z = -0.12;
-            s.head.rotation.y = Math.sin(t * 0.5) * 0.25;
-            s.head.rotation.x = -0.12;
-            player.rotation.x = 0.1;
-            player.position.y = 0.5 + Math.sin(t) * 1.2;
-          }
-        };
-        anim = new Pose();
-      } catch { anim = new skinview3d.IdleAnimation(); }
-      charViewer.animation = anim;
+        charViewer = initViewer();
+      } catch {
+        charFlat = window.ui.swapCanvas($('home-char'), 210, 320);
+      }
     }
     try {
       const data = await window.api.listSkins();
       const cur = data.skins.find((s) => s.id === data.current);
       const nick = (window.ui.state.cfg && window.ui.state.cfg.username) || 'MHF_Steve';
-      const key = cur ? `skin:${cur.id}` : `nick:${nick}`;
+      const key = (cur ? `skin:${cur.id}` : `nick:${nick}`) + (charFlat ? ':2d' : '');
       if (key === charKey) return;
-      if (cur) await charViewer.loadSkin(cur.url, { model: cur.variant === 'slim' ? 'slim' : 'default' });
-      else await charViewer.loadSkin(`https://mc-heads.net/skin/${encodeURIComponent(nick)}`);
+      const url = cur ? cur.url : `https://mc-heads.net/skin/${encodeURIComponent(nick)}`;
+      const model = cur && cur.variant === 'slim' ? 'slim' : 'default';
+      if (charViewer) await charViewer.loadSkin(url, { model });
+      else await window.ui.flatSkin(charFlat, url, model);
       charKey = key;
     } catch {}
+  }
+
+  function initViewer() {
+    const charViewer = new skinview3d.SkinViewer({ canvas: $('home-char'), width: 210, height: 320 });
+    charViewer.controls.enableZoom = false;
+    charViewer.zoom = 0.62;
+    charViewer.autoRotate = true;
+    charViewer.autoRotateSpeed = 0.6;
+    let anim = null;
+    try {
+      const Pose = class extends skinview3d.PlayerAnimation {
+        animate(player) {
+          const t = this.progress * 1.4;
+          const s = player.skin;
+          s.leftArm.rotation.z = 0.4 + Math.sin(t) * 0.05;
+          s.rightArm.rotation.z = -0.4 - Math.sin(t + 0.6) * 0.05;
+          s.leftArm.rotation.x = -0.15;
+          s.rightArm.rotation.x = -0.15;
+          s.leftLeg.rotation.x = 0.5 + Math.sin(t * 0.9) * 0.06;
+          s.rightLeg.rotation.x = -0.2 - Math.sin(t * 0.9) * 0.06;
+          s.leftLeg.rotation.z = 0.12;
+          s.rightLeg.rotation.z = -0.12;
+          s.head.rotation.y = Math.sin(t * 0.5) * 0.25;
+          s.head.rotation.x = -0.12;
+          player.rotation.x = 0.1;
+          player.position.y = 0.5 + Math.sin(t) * 1.2;
+        }
+      };
+      anim = new Pose();
+    } catch { anim = new skinview3d.IdleAnimation(); }
+    charViewer.animation = anim;
+    return charViewer;
   }
   loadChar();
   document.querySelector('.rail-btn[data-view="home"]').addEventListener('click', loadChar);
