@@ -70,9 +70,40 @@ Credential storage needs a secret service (gnome-keyring or kwallet). The `.deb`
 
 ## Why open source
 
-So players can verify what the launcher does. It talks only to `mctema.lt`, official Mojang/Fabric/Modrinth endpoints and `mc-heads.net` - nothing else. Client mods are hash-verified before every launch. Releases are built from this source with published SHA-256 checksums.
+So players can verify what the launcher does, rather than taking our word for it. The sections below exist to make that practical: they say where to look instead of leaving you to read the whole thing.
 
 Found something off? See [SECURITY.md](SECURITY.md).
+
+## How it works
+
+**Three processes.** `main.js` is the Electron main process and the only part with filesystem and network access. `renderer/` is the UI, and it runs with `nodeIntegration: false` and `contextIsolation: true`, so page code cannot reach Node at all. Everything in between crosses `preload.js`, which exposes one narrow `window.api` object of named IPC calls. If a capability is not listed there, the UI does not have it.
+
+**Where the logic lives.** `lib/` holds the parts worth reading on their own: `pinned-http.js` (every call to our API), `credentials.js` (what touches your password), `mods.js` (integrity checks), `config.js`, `mc-status.js`. These have unit tests, and none of them need Electron to run.
+
+**Logging in.** Your password goes to `mctema.lt/api/launcher/login` over a certificate-pinned connection and is checked against the server's AuthMe database, the same account you use in game. The server returns a session token valid for 30 days. Both the token and the password are stored encrypted by the OS keystore in `auth.dat`; the password is kept because refreshing an expired token needs it.
+
+**Playing.** Before every launch the bundled client mods are hashed and compared against known values, and the game's mods folder is rebuilt from scratch. A mismatch aborts the launch rather than joining the server with modified code. The game then runs on the bundled Temurin JRE 21 with a Fabric profile and connects straight to `play.mctema.lt`.
+
+**Updating.** `electron-updater` checks `mctema.lt/updates/` every 15 minutes and installs on quit. This path deliberately uses ordinary TLS rather than our pins, so that a mistake in the pin list stays recoverable by shipping a fix.
+
+**Everything it contacts.** `mctema.lt` for accounts, friends, chat and the gallery; Mojang (`launchermeta`, `launcher`, `libraries`, `resources.download`) and `meta.fabricmc.net` for game files; `api.modrinth.com` for optional mods; `mc-heads.net` for skin and avatar images.
+
+Grepping the source for `https://` returns a few more, and it is worth saying why rather than leaving you to wonder. `discord.gg`, `youtube.com` and `twitch.tv` are links handed to your browser, never fetched by the launcher. `files.minecraftforge.net`, `search.maven.org`, `github.com` and `help.minecraft.net` live in [`lib/mclc/`](lib/mclc), the vendored copy of minecraft-launcher-core, on Forge code paths this launcher does not use; they are kept so the fork stays close to upstream.
+
+## Security
+
+- **Certificate pinning.** Calls to `mctema.lt` are rejected unless the certificate chain contains one of the public keys pinned in [`lib/pinned-http.js`](lib/pinned-http.js). A rogue certificate authority, a corporate proxy or hostile wifi cannot read your credentials. Backup keys for a second CA are pinned as well, so a certificate change cannot lock everyone out.
+- **Credentials.** Stored through the OS keystore, DPAPI on Windows and libsecret or kwallet on Linux. On Linux the launcher refuses to save anything when only Chromium's `basic_text` backend is available, because that "encryption" uses a hardcoded key.
+- **Session tokens.** 32 random bytes. The server stores only their SHA-256, so a database leak yields nothing usable. Logging out revokes the token, and changing your password invalidates every session.
+- **Client integrity.** Bundled mods are hash-verified on every launch, not just at install.
+- **No telemetry.** The launcher reports nothing about you anywhere.
+- **Verifiable builds.** Every release ships `SHA256SUMS.txt` and a signed provenance attestation from the workflow that built it:
+
+```bash
+gh attestation verify MCTemaLauncher-Setup.exe --repo Noldez/MCTemaLauncher
+```
+
+The installer is not code-signed yet ([#5](https://github.com/Noldez/MCTemaLauncher/issues/5)), which is the one gap we are aware of and do not hide.
 
 ## Troubleshooting
 
