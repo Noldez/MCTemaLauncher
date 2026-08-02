@@ -14,6 +14,9 @@ const configStore = require('./lib/config');
 const { createCredentialStore, authErrText } = require('./lib/credentials');
 const { mcStatus } = require('./lib/mc-status');
 const { stageMods, resolveJava: resolveBundledJava } = require('./lib/mods');
+const { createRichPresence } = require('./lib/rpc');
+const { initUpdater: startUpdater } = require('./lib/updater');
+const { createToastStack } = require('./lib/toasts');
 const { autoUpdater } = require('electron-updater');
 
 // Software WebGL fallback for GPU-less machines (VMs, blocklisted drivers);
@@ -212,60 +215,10 @@ function ensureMods() {
   });
 }
 
-const { Client: RpcClient } = require('@xhayper/discord-rpc');
-
-let rpc = null;
-let rpcReady = false;
-let rpcDetails = 'Leidykleje';
-let rpcStateText = SERVER.host;
-let rpcStart = Date.now();
-
-function rpcActivity() {
-  return {
-    details: rpcDetails,
-    state: rpcStateText,
-    largeImageKey: 'logo',
-    largeImageText: 'MC Tema',
-    startTimestamp: rpcStart,
-    buttons: [
-      { label: 'Zaisk MC Tema', url: 'https://mctema.lt' },
-      { label: 'Discord', url: 'https://discord.gg/mctema' },
-    ],
-    instance: false,
-  };
-}
-
-function setRpc(details, state, resetTimer) {
-  rpcDetails = details;
-  rpcStateText = state;
-  if (resetTimer) rpcStart = Date.now();
-  if (rpc && rpcReady && rpc.user) rpc.user.setActivity(rpcActivity()).catch(() => {});
-}
-
-function destroyRpc() {
-  if (!rpc) return;
-  try { rpc.destroy(); } catch {}
-  rpc = null;
-  rpcReady = false;
-}
-
-function initRpc() {
-  if (rpc || !DISCORD_CLIENT_ID) return;
-  try {
-    rpc = new RpcClient({ clientId: DISCORD_CLIENT_ID });
-    rpc.on('ready', () => {
-      rpcReady = true;
-      if (rpc.user) rpc.user.setActivity(rpcActivity()).catch(() => {});
-    });
-    rpc.login().catch(() => {
-      rpcReady = false;
-      rpc = null;
-      setTimeout(initRpc, 30000);
-    });
-  } catch {
-    rpc = null;
-  }
-}
+const presence = createRichPresence({ clientId: DISCORD_CLIENT_ID, defaultState: SERVER.host });
+const setRpc = (details, state, resetTimer) => presence.set(details, state, resetTimer);
+const destroyRpc = () => presence.destroy();
+const initRpc = () => presence.init();
 
 let win = null;
 
@@ -293,18 +246,11 @@ function createWindow() {
 }
 
 function initUpdater() {
-  if (!app.isPackaged) return;
-  const send = (data) => { if (win && !win.isDestroyed()) win.webContents.send('app:update', data); };
-  try {
-    autoUpdater.autoDownload = true;
-    autoUpdater.autoInstallOnAppQuit = true;
-    autoUpdater.on('error', () => {});
-    autoUpdater.on('update-available', (i) => send({ state: 'available', version: i && i.version }));
-    autoUpdater.on('download-progress', (p) => send({ state: 'downloading', percent: Math.round((p && p.percent) || 0) }));
-    autoUpdater.on('update-downloaded', (i) => send({ state: 'ready', version: i && i.version }));
-    autoUpdater.checkForUpdates().catch(() => {});
-    setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 900000);
-  } catch {}
+  startUpdater({
+    autoUpdater,
+    enabled: app.isPackaged,
+    send: (data) => { if (win && !win.isDestroyed()) win.webContents.send('app:update', data); },
+  });
 }
 
 app.whenReady().then(() => {
@@ -325,58 +271,14 @@ app.on('window-all-closed', () => {
 ipcMain.on('win:minimize', () => win && win.minimize());
 ipcMain.on('win:focus', () => { if (win) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); } });
 
-const TOAST_W = 368;
-const TOAST_H = 82;
-const toastWins = [];
-function layoutToasts() {
-  const { screen } = require('electron');
-  const wa = screen.getPrimaryDisplay().workArea;
-  toastWins.forEach((tw, i) => {
-    if (tw.isDestroyed()) return;
-    tw.setPosition(wa.x + wa.width - TOAST_W - 8, wa.y + wa.height - (TOAST_H + 4) * (i + 1) - 8);
-  });
-}
-function dropToast(tw) {
-  const i = toastWins.indexOf(tw);
-  if (i !== -1) toastWins.splice(i, 1);
-  if (!tw.isDestroyed()) tw.close();
-  layoutToasts();
-}
-ipcMain.on('notify:native', (_e, p) => {
-  const { title, body, nick } = p || {};
-  if (!title) return;
-  while (toastWins.length >= 3) dropToast(toastWins[0]);
-  const tw = new BrowserWindow({
-    width: TOAST_W,
-    height: TOAST_H,
-    frame: false,
-    transparent: true,
-    resizable: false,
-    movable: false,
-    focusable: false,
-    skipTaskbar: true,
-    alwaysOnTop: true,
-    show: false,
-    webPreferences: { preload: path.join(__dirname, 'toast-preload.js'), contextIsolation: true },
-  });
-  tw.setAlwaysOnTop(true, 'screen-saver');
-  const qs = new URLSearchParams({ title: String(title), body: String(body || ''), nick: String(nick || '') });
-  tw.loadFile(path.join(__dirname, 'renderer', 'toast.html'), { search: qs.toString() });
-  tw.once('ready-to-show', () => {
-    toastWins.push(tw);
-    layoutToasts();
-    tw.showInactive();
-  });
-  const auto = setTimeout(() => dropToast(tw), 8000);
-  tw.on('closed', () => clearTimeout(auto));
-});
-ipcMain.on('toast:dismiss', (e) => {
-  const tw = BrowserWindow.fromWebContents(e.sender);
-  if (tw) dropToast(tw);
-});
+const toasts = createToastStack({ BrowserWindow, getScreen: () => require('electron').screen, appDir: __dirname });
+
+ipcMain.on('notify:native', (_e, p) => toasts.show(p || {}));
+
+ipcMain.on('toast:dismiss', (e) => { toasts.dropBySender(e.sender); });
+
 ipcMain.on('toast:open', (e, nick) => {
-  const tw = BrowserWindow.fromWebContents(e.sender);
-  if (tw) dropToast(tw);
+  toasts.dropBySender(e.sender);
   if (!win) return;
   if (win.isMinimized()) win.restore();
   win.show();
