@@ -41,9 +41,23 @@ function saveConfig(cfg) {
 }
 
 const WEBSITE_HOST = 'mctema.lt';
+// Public key pins for mctema.lt. Cloudflare issues our edge certificate, and
+// which CA it picks is their decision, not ours - so Let's Encrypt is pinned as
+// a backup alongside the Google chain we are served today. Without it, a CA
+// switch on Cloudflare's side would lock every player out at once.
+//
+// Roots are pinned rather than intermediates: they outlive intermediates by
+// years, and the chain walk in pinnedApi() checks every certificate it is sent.
+// Regenerate with `npm run check-pins` - do NOT copy pin values from a CA's
+// website, since those are SPKI digests and this code hashes Node's `pubkey`
+// field, which differs for ECDSA keys.
 const CERT_PINS = [
-  'H7AMYAvicN2+UcFPBz3kJXCDmGrTItZh4ujUBK8hoWg=', // GTS WE1
+  'H7AMYAvicN2+UcFPBz3kJXCDmGrTItZh4ujUBK8hoWg=', // GTS WE1 (current issuer)
   'YSoUL4CBzo5aJ/ES9gSZTsavsgtHsiLLnTG+BKUdork=', // GTS Root R4
+  'C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=', // ISRG Root X1 (Let's Encrypt, RSA)
+  '+QHt0j1IgBr88CsiSG197KRsbAlprQDohcvoe1Za45Y=', // ISRG Root X2 (Let's Encrypt, ECDSA)
+  'fk6IOKit1ild5647BH06ujSIq5XbCgqlbYl6ANhhi88=', // ISRG Root YR (Let's Encrypt, newer hierarchy)
+  'o8gmWo6hTNA1Y/ybI8g6rlbzT1YElMY4ivrLbjg5fyE=', // ISRG Root YE (Let's Encrypt, newer hierarchy)
 ];
 const authPath = path.join(gameDir, 'auth.dat');
 
