@@ -58,6 +58,8 @@ contextBridge.exposeInMainWorld('api', {
   onClosed: (cb) => ipcRenderer.on('mc:closed', (_e, c) => cb(c)),
   onUpdate: (cb) => ipcRenderer.on('app:update', (_e, u) => cb(u)),
   onCrash: (cb) => ipcRenderer.on('crash:show', (_e, p) => cb(p)),
+  onDeepLink: (cb) => ipcRenderer.on('deeplink', (_e, l) => cb(l)),
+  deepLinkPending: () => ipcRenderer.invoke('deeplink:pending'),
   crashSend: () => ipcRenderer.invoke('crash:send'),
   crashCopy: () => ipcRenderer.invoke('crash:copy'),
 });
