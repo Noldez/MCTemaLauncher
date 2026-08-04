@@ -20,32 +20,71 @@
     if (hero) hero.textContent = fmt(n);
   }
 
-  function itemRow(s) {
-    const row = el('button', 'shop-item');
-    if (s.imageUrl) {
-      const art = el('span', 'si-art');
+  // Same art convention as the website shop (src/pages/shop/index.tsx): emblem art by
+  // card order within the category, icon fallback elsewhere, accent glow cycled per card.
+  // Art is bundled so the shop looks right offline; a server-set imageUrl still wins.
+  const ART = {
+    rangai: ['shop/rank-knight.png', 'shop/rank-mage.png', 'shop/rank-king.png', 'shop/rank-god.png'],
+    raktai: ['shop/key-green.png', 'shop/key-gold.png', 'shop/key-diamond.png'],
+  };
+  const ICONS = { kosmetika: ['fa-palette', 'fa-wand-magic-sparkles'] };
+  const GLOWS = ['rgba(74,222,128,.4)', 'rgba(255,196,77,.45)', 'rgba(110,231,183,.4)', 'rgba(192,132,252,.45)'];
+  const serviceArt = new Map();
+
+  const coinImg = () => {
+    const c = el('img', 'coin-ic');
+    c.src = 'shop/coin.png';
+    c.alt = 'auksiniai';
+    return c;
+  };
+
+  // Descriptions come from the site as one perk per line.
+  const splitPerks = (s) => String(s.description || '').split('\n').map((t) => t.trim()).filter(Boolean);
+
+  function itemCard(s, slug, i) {
+    const glow = GLOWS[i % GLOWS.length];
+    const src = s.imageUrl || (ART[slug] || [])[i] || null;
+    const icon = src ? null : (ICONS[slug] || ['fa-gem'])[i % (ICONS[slug] || ['fa-gem']).length];
+    serviceArt.set(s.id, { src, icon, glow });
+
+    const card = el('button', 'shop-card');
+    card.style.setProperty('--glow', glow);
+    card.style.setProperty('--bob', `${(i % 4) * -1.15}s`);
+    const art = el('span', 'sc-art');
+    if (src) {
       const img = el('img');
-      img.src = s.imageUrl;
+      img.src = src;
       img.alt = '';
       art.append(img);
-      row.append(art);
+    } else {
+      art.append(el('i', `fa-solid ${icon} sc-ic`));
     }
-    const meta = el('span', 'si-meta');
-    meta.append(el('b', null, s.name), el('span', 'si-desc', s.description || ''));
-    const tag = el('span', 'si-price');
-    if (s.salePriceCents != null) tag.append(el('s', null, fmt(s.priceCents)));
-    tag.append(el('b', null, fmt(price(s))), el('i', 'fa-solid fa-coins si-coin'));
-    row.append(meta, tag, el('i', 'fa-solid fa-chevron-right si-go'));
-    row.addEventListener('click', () => openConfirm(s));
-    return row;
+    art.append(el('i', 'sc-pad'));
+    if (s.salePriceCents != null) card.append(el('span', 'sc-sale', 'AKCIJA'));
+    const pr = el('span', 'sc-price');
+    if (s.salePriceCents != null) pr.append(el('s', null, fmt(s.priceCents)));
+    pr.append(el('b', null, fmt(price(s))), coinImg());
+    card.append(art, el('b', 'sc-name', s.name), pr);
+    const perks = splitPerks(s);
+    if (perks.length > 1) {
+      const pv = el('span', 'sc-perks');
+      perks.slice(0, 3).forEach((p) => pv.append(el('span', 'sc-perk', p)));
+      if (perks.length > 3) pv.append(el('span', 'sc-perk more', `+${perks.length - 3} daugiau`));
+      card.append(pv);
+    }
+    card.addEventListener('click', () => openConfirm(s));
+    return card;
   }
 
   function renderCatalog(categories) {
     const list = $('shop-list');
     list.textContent = '';
+    serviceArt.clear();
     categories.filter((c) => (c.services || []).length).forEach((c) => {
       list.append(el('div', 'shop-cat', c.name));
-      c.services.forEach((s) => list.append(itemRow(s)));
+      const grid = el('div', 'shop-grid');
+      c.services.forEach((s, i) => grid.append(itemCard(s, c.slug, i)));
+      list.append(grid);
     });
     if (!list.children.length) list.append(el('div', 'shop-empty', 'Parduotuvė tuščia.'));
   }
@@ -69,7 +108,31 @@
 
   function openConfirm(s) {
     pending = s;
+    const art = serviceArt.get(s.id) || {};
+    $('sm-art').style.setProperty('--glow', art.glow || 'rgba(74,222,128,.35)');
+    const img = $('sm-art-img');
+    const ic = $('sm-art-ic');
+    if (art.src) {
+      img.src = art.src;
+      img.className = '';
+      ic.className = 'hidden';
+    } else {
+      img.className = 'hidden';
+      ic.className = `fa-solid ${art.icon || 'fa-gem'}`;
+    }
     $('sm-title').textContent = s.name;
+    const desc = $('sm-desc');
+    desc.textContent = '';
+    const perks = splitPerks(s);
+    if (perks.length > 1) {
+      perks.forEach((p) => {
+        const row = el('div', 'sm-perk');
+        row.append(el('i', 'fa-solid fa-check'), el('span', null, p));
+        desc.append(row);
+      });
+    } else {
+      desc.textContent = perks[0] || '';
+    }
     $('sm-price').textContent = fmt(price(s));
     $('sm-after').textContent = fmt(balance - price(s));
     $('sm-err').classList.add('hidden');
@@ -150,6 +213,8 @@
       : (r && r.error) || 'Kažkas nepavyko.';
     err.classList.remove('hidden');
   });
+
+  window.ui.ambientFx(document.querySelector('.shop-hero'), $('shop-fx'));
 
   $('shop-topup').addEventListener('click', () => window.ui.openUrl('https://mctema.lt/parduotuve'));
   document.querySelectorAll('#view-shop [data-url]').forEach((b) =>
