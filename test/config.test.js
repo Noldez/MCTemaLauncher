@@ -1,8 +1,12 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { DEFAULTS, loadConfig, saveConfig } = require('../lib/config');
+const { DEFAULTS, defaultRam, loadConfig, saveConfig } = require('../lib/config');
 
 const CONFIG_PATH = '/tmp/.mctema/launcher.json';
+const GB = 1024 ** 3;
+// Pin system memory in loadConfig tests: the real os.totalmem would make the
+// expected ram default depend on the machine running the suite.
+const SMALL_RAM = () => 8 * GB;
 
 function fakeIo(initial = {}) {
   const files = { ...initial };
@@ -20,15 +24,36 @@ function fakeIo(initial = {}) {
 }
 
 test('a missing config yields defaults', () => {
-  const cfg = loadConfig(CONFIG_PATH, fakeIo());
+  const cfg = loadConfig(CONFIG_PATH, fakeIo(), SMALL_RAM);
   assert.deepEqual(cfg, DEFAULTS);
 });
 
 test('unreadable or corrupt JSON yields defaults rather than throwing', () => {
   for (const body of ['{ not json', '', 'null']) {
-    const cfg = loadConfig(CONFIG_PATH, fakeIo({ [CONFIG_PATH]: body }));
+    const cfg = loadConfig(CONFIG_PATH, fakeIo({ [CONFIG_PATH]: body }), SMALL_RAM);
     assert.equal(cfg.ram, DEFAULTS.ram, `body: ${JSON.stringify(body)}`);
   }
+});
+
+test('defaultRam tiers by total system memory', () => {
+  assert.equal(defaultRam(32 * GB), 8);
+  assert.equal(defaultRam(16 * GB), 8);
+  assert.equal(defaultRam(15.9 * GB), 6);
+  assert.equal(defaultRam(12 * GB), 6);
+  assert.equal(defaultRam(11.9 * GB), 4);
+  assert.equal(defaultRam(8 * GB), 4);
+  assert.equal(defaultRam(4 * GB), 4);
+});
+
+test('first run picks the RAM default from system memory', () => {
+  assert.equal(loadConfig(CONFIG_PATH, fakeIo(), () => 32 * GB).ram, 8);
+  assert.equal(loadConfig(CONFIG_PATH, fakeIo(), () => 12 * GB).ram, 6);
+  assert.equal(loadConfig(CONFIG_PATH, fakeIo(), SMALL_RAM).ram, 4);
+});
+
+test('a stored ram value is never overridden by system memory', () => {
+  const io = fakeIo({ [CONFIG_PATH]: JSON.stringify({ ram: 2 }) });
+  assert.equal(loadConfig(CONFIG_PATH, io, () => 32 * GB).ram, 2);
 });
 
 test('stored values override defaults, absent keys keep them', () => {
