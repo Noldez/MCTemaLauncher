@@ -46,66 +46,38 @@ One click installs Minecraft, Fabric and Java, signs you in and drops you on `pl
 
 ## Install
 
-<details open>
-<summary><b>Windows</b></summary>
+**Windows 10 or 11, 64-bit.** Download the installer from [mctema.lt](https://mctema.lt) and run it.
 
-Download the installer from **[mctema.lt](https://mctema.lt)** and run it. Windows 10 or 11, 64-bit.
+> [!CAUTION]
+> The installer is not code-signed yet ([#5](https://github.com/Noldez/MCTemaLauncher/issues/5)), so SmartScreen may warn on first run. Verify it rather than trusting the prompt - SHA-256 `f4008fa041599eec0f66ce30dbef184cc669358aacd0814f02378172467c1aac`, and [VirusTotal](https://www.virustotal.com/gui/file/f4008fa041599eec0f66ce30dbef184cc669358aacd0814f02378172467c1aac) reports 0/62. Then **More info → Run anyway**.
 
-> [!WARNING]
-> The installer is not code-signed yet ([#5](https://github.com/Noldez/MCTemaLauncher/issues/5)), so SmartScreen may warn on first run. Verify it instead of trusting the prompt:
->
-> ```
-> SHA-256  f4008fa041599eec0f66ce30dbef184cc669358aacd0814f02378172467c1aac
-> ```
->
-> [VirusTotal](https://www.virustotal.com/gui/file/f4008fa041599eec0f66ce30dbef184cc669358aacd0814f02378172467c1aac) reports 0/62 detections. Then choose **More info → Run anyway**.
-
-</details>
-
-<details>
-<summary><b>Linux</b> - .deb recommended, AppImage available</summary>
-
-**Debian, Ubuntu, Kali, Mint.** No FUSE needed, adds a normal menu entry:
+**Linux.** The `.deb` is the recommended route on Debian, Ubuntu, Kali and Mint - no FUSE, normal menu entry:
 
 ```bash
-sudo apt install ./MCTemaLauncher-*.deb
-mctema-launcher
+sudo apt install ./MCTemaLauncher-*.deb && mctema-launcher
 ```
 
-**Everything else** - the AppImage:
+Everywhere else, the AppImage. Distros that dropped FUSE 2 need it to unpack itself instead of mounting, hence the double dash:
 
 ```bash
 chmod +x MCTemaLauncher-*.AppImage
-./MCTemaLauncher-*.AppImage
-```
-
-On distros that dropped FUSE 2 (Kali, newer Arch and Ubuntu) the AppImage must unpack itself instead of mounting - note the double dash:
-
-```bash
 ./MCTemaLauncher-*.AppImage --appimage-extract-and-run
 ```
 
-> [!NOTE]
-> Credential storage needs a running secret service. The `.deb` pulls in `libsecret`; on a minimal desktop without `gnome-keyring` or `kwallet` the launcher says so rather than storing your password unprotected.
+Credential storage needs a running secret service. The `.deb` pulls in `libsecret`; without `gnome-keyring` or `kwallet` the launcher says so rather than storing your password unprotected.
 
-</details>
-
-Every release also ships `SHA256SUMS.txt` and a signed build provenance attestation:
-
-```bash
-gh attestation verify MCTemaLauncher-Setup.exe --repo Noldez/MCTemaLauncher
-```
+Every release ships `SHA256SUMS.txt` and a build provenance attestation: `gh attestation verify MCTemaLauncher-Setup.exe --repo Noldez/MCTemaLauncher`.
 
 ## Security
 
-The launcher is open source so this section can be checked rather than believed. Found something? See [SECURITY.md](SECURITY.md).
+Open source so this can be checked rather than believed. Found something? [SECURITY.md](SECURITY.md).
 
 <img src=".github/trust-boundaries.svg" alt="Trust boundaries: the password stops at the launcher, only a single-use ticket reaches the game" width="100%">
 
 | Layer | Holds against | How |
 |---|---|---|
 | **Transport** | Interception, rogue or compelled CA | Every call to `mctema.lt` is refused unless the chain contains a key pinned in [`lib/pinned-http.js`](lib/pinned-http.js). A second CA is pinned as backup so a certificate change cannot lock everyone out, and CAA records stop any other CA issuing for the domain at all. |
-| **Identity** | Credential theft, replay | Password verified server-side against AuthMe, then never sent again. Tokens are 32 random bytes and the server keeps only their SHA-256, so a database leak yields nothing usable. Refresh tokens are single-use: one seen twice means a copy is circulating, so the whole login is revoked. Theft becomes visible instead of silent. Logging out retires the token server-side, and changing your password in game kills every session you have. |
+| **Identity** | Credential theft, replay | Password verified server-side against AuthMe, then never sent again. Tokens are 32 random bytes and the server keeps only their SHA-256, so a database leak yields nothing usable. Refresh tokens are single-use: one seen twice means a copy is circulating, so the whole login is revoked. Logging out retires the token server-side, and changing your password in game kills every session you have. |
 | **Authorization** | Privilege crossing between surfaces | Tokens are scoped. The one handed to the game reaches the presence beat and nothing else, so stealing it buys the ability to look like you are playing. Prices and balances are decided server-side; the client sends the price it displayed only so the server can refuse when they disagree. |
 | **Supply chain** | Malicious update or mod | Updates install only when a manifest signed with an offline key vouches for that exact version and hash. Optional mods are checked against Modrinth's SHA-512 and Minecraft files against Mojang's hashes before anything loads as code. Bundled client mods are re-hashed on every launch, not just at install. |
 | **Local process** | A bug in our own UI | The interface runs with no Node and no network, reaches the rest only through named IPC, and cannot navigate away from the bundled page. Values read back from settings are validated before they touch a filesystem path, because that file is writable by anything running as you. |
@@ -113,156 +85,47 @@ The launcher is open source so this section can be checked rather than believed.
 | **Abuse** | A modified client hammering the API | Per-account limits on the endpoints that cost us something. The thresholds are not published, for the same reason you do not print the alarm code on the door. |
 | **Telemetry** | Us collecting things you did not agree to | There is none. The one exception is manual: after a crash you can press *Siųsti logą*, and even then the log has your account name and home path stripped out before it leaves. |
 
-### Not covered
-
-Worth being straight about, since a list that claims everything is worth nothing.
-
-- **Anyone with administrator access to your machine.** They can read the keystore, patch the launcher, or just install a keylogger. No client-side control survives that.
-- **Code signing.** The installer is unsigned ([#5](https://github.com/Noldez/MCTemaLauncher/issues/5)), so SmartScreen has no reputation to go on and you verify by checksum instead. This is the gap we would close first.
-- **A CA inside the CAA set being compromised** and issuing a certificate that also matches a pinned root. Pinning narrows this to two authorities, it does not eliminate it.
-- **Whatever is already on your account.** If someone knows your password, the launcher is not what stops them; change it in game and every session dies with it.
-
+**Not covered**, since a list that claims everything is worth nothing. Anyone with administrator access to your machine can read the keystore or patch the launcher, and no client-side control survives that. The installer is unsigned, so you verify by checksum instead. Pinning narrows certificate issuance to two authorities rather than eliminating the risk. And if someone already knows your password, the launcher is not what stops them - change it in game and every session dies with it.
 
 ## How it works
 
 <img src=".github/architecture.svg" alt="Process layout: isolated interface, narrow bridge, main process with disk and network access, and the hosts it contacts" width="100%">
 
-<details>
-<summary><b>The three processes</b></summary>
+`main.js` is the only part with filesystem and network access. The UI runs with `nodeIntegration: false` and `contextIsolation: true`, so page code cannot reach Node, and everything between them crosses `preload.js` as named IPC calls. If a capability is not listed there, the UI does not have it. The logic worth reading on its own lives in `lib/` - pinned HTTP, credentials, mod integrity, update signatures, crash handling - all unit-tested and none of it needing Electron to run.
 
-`main.js` is the Electron main process and the only part with filesystem and network access. `renderer/` is the UI, running with `nodeIntegration: false` and `contextIsolation: true`, so page code cannot reach Node at all. Everything between them crosses `preload.js`, which exposes one narrow `window.api` of named IPC calls - if a capability is not listed there, the UI does not have it.
+**Logging in.** Your password goes to the API over a pinned connection and is checked against the server's AuthMe database, the same account you use in game. You get a session token and a refresh token back, and staying signed in uses the refresh token, so the password is not sent again. It stays encrypted in `auth.dat` for the next launch and never leaves the launcher.
 
-`lib/` holds the parts worth reading on their own: `pinned-http.js` (every call to our API), `credentials.js` (what touches your password), `mods.js` (integrity checks), `release-verify.js` (update signatures), plus `config.js`, `crash.js` and `mc-status.js`. All unit-tested, none need Electron to run.
+**Signing you in to the game.** Minecraft never gets your password. Anything loaded into that JVM can read its environment, including mods you installed yourself, so the password would be the one credential a hostile mod could simply pick up. The launcher requests a one-shot ticket instead - one nickname, one use, five minutes - and passes only that. If a ticket cannot be issued the game still starts and you type `/login` once.
 
-</details>
+**Launching.** Bundled client mods are hashed against known values and the mods folder is rebuilt from scratch every launch. A mismatch aborts rather than joining with modified code.
 
-<details>
-<summary><b>Logging in, and why the password never reaches the game</b></summary>
+**Updating.**
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor P as Player
-    participant L as Launcher
-    participant S as mctema.lt
-    participant G as Minecraft JVM
+<img src=".github/update-gate.svg" alt="Update gate: the installer and the signature travel on different paths, and both must agree before anything installs" width="100%">
 
-    P->>L: password, once
-    L->>S: verify over pinned TLS
-    S-->>L: session token + refresh token
-    Note over L: password encrypted<br/>in the OS keystore
-    L->>S: request login ticket
-    S-->>L: single use, short lived
-    L->>G: ticket only
-    G->>S: redeem while joining
-    Note over G: ticket now worthless<br/>password was never here
-```
-
-Your password goes to `mctema.lt/api/launcher/login` over a pinned connection and is checked against the server's AuthMe database - the same account you use in game. The server returns a session token plus a refresh token, and staying signed in afterwards uses the refresh token, so **the password is not sent again**.
-
-The launcher does *not* hand Minecraft your password. Anything loaded into that JVM can read its environment, including mods you installed yourself, so the password would be the one credential a hostile mod could simply pick up. Instead the launcher requests a one-shot login ticket - one nickname, one use, five minutes - and passes only that. The client mod sends it through the encrypted handshake and the server redeems it, after which it is worthless. If a ticket cannot be issued the game still starts and you type `/login` once.
-
-The password stays encrypted in `auth.dat` so you are not asked every time: it signs you in and stands in when there is no usable refresh token. It never leaves the launcher.
-
-</details>
-
-<details>
-<summary><b>Launching the game</b></summary>
-
-Before every launch the bundled client mods are hashed against known values and the mods folder is rebuilt from scratch. A mismatch aborts the launch rather than joining the server with modified code. The game then runs on the bundled Temurin JRE 21 with a Fabric profile and connects straight to `play.mctema.lt`.
-
-</details>
-
-<details>
-<summary><b>Updating</b></summary>
-
-```mermaid
-flowchart LR
-    A["New version<br/>advertised"] --> B["Installer downloaded<br/>ordinary TLS"]
-    B --> C["Release manifest fetched<br/>pinned TLS"]
-    C --> D{"Signed by our<br/>offline key?<br/>Version and hash<br/>both match?"}
-    D -->|yes| E["Install"]
-    D -->|no| F["Delete<br/>and report"]
-
-    style E fill:#1f3b25,stroke:#3a6
-    style F fill:#3b1f1f,stroke:#a33
-```
-
-Two independent paths have to agree: rewriting the download is not enough without the key, and the key is not on the server.
-
-`electron-updater` checks `mctema.lt/updates/` every 15 minutes. That download deliberately uses ordinary TLS rather than our pins, so a mistake in the pin list stays recoverable by shipping a fix. Because it does, the trust comes from elsewhere: the launcher fetches a release manifest signed with an offline key over the **pinned** connection, hashes the installer it just downloaded, and installs only if the signature covers exactly that version and hash. Anything else is deleted.
-
-</details>
-
-<details>
-<summary><b>Everything it contacts</b></summary>
-
-`mctema.lt` for accounts, friends, chat, news, shop and the gallery; Mojang (`launchermeta`, `launcher`, `libraries`, `resources.download`) and `meta.fabricmc.net` for game files; `api.modrinth.com` for optional mods; `mc-heads.net` for skin and avatar images.
-
-Grepping the source for `https://` returns a few more, and it is worth saying why rather than leaving you to wonder. `discord.gg`, `youtube.com` and `twitch.tv` are links handed to your browser, never fetched by the launcher. `files.minecraftforge.net`, `search.maven.org`, `github.com` and `help.minecraft.net` live in [`lib/mclc/`](lib/mclc), the vendored copy of minecraft-launcher-core, on Forge code paths this launcher does not use - kept so the fork stays close to upstream.
-
-</details>
+`electron-updater` checks the feed every 15 minutes. That download deliberately uses ordinary TLS rather than our pins, so a mistake in the pin list stays recoverable by shipping a fix - which is exactly why the trust comes from the signature instead.
 
 ## Troubleshooting
 
-<details>
-<summary><b>Windows warns about the file</b></summary>
+**Windows warns about the file.** No code signature yet, so fresh builds have no reputation. Verify the checksum above, then *More info → Run anyway*.
 
-The installer is not code-signed yet, so fresh builds have no reputation with SmartScreen. Verify the checksum and VirusTotal scan under [Install](#install), then choose **More info → Run anyway**.
+**`dlopen(): error loading libfuse.so.2`.** Kali, newer Ubuntu and Arch dropped FUSE 2. Install the `.deb`, or run the AppImage with `--appimage-extract-and-run`.
 
-</details>
+**"Nerasta saugi raktinė".** No secret service is running, so there is nowhere safe to keep your password. The launcher refuses rather than falling back to Chromium's `basic_text` backend, which "encrypts" with a key anyone can look up. Start `gnome-keyring` or `kwallet`.
 
-<details>
-<summary><b>Linux: <code>dlopen(): error loading libfuse.so.2</code></b></summary>
+**The 3D character is missing.** Virtual machines usually have no GPU and land on Chromium's WebGL blocklist. It falls back to software rendering, then to a flat 2D skin. Everything else works normally.
 
-Kali, newer Ubuntu and Arch no longer ship FUSE 2, which the AppImage needs to mount itself. Install the `.deb` instead, or run the AppImage so it unpacks itself:
+**"Nepavyko pasiekti mctema.lt".** A network hiccup, common on VM NAT or after waking from sleep. Reads retry themselves; press refresh if it persists.
 
-```bash
-./MCTemaLauncher-*.AppImage --appimage-extract-and-run
-```
+**"Saugumo klaida: nepatikimas sertifikatas".** A certificate that did not match our pins. That is what an intercepted connection looks like, so treat it seriously - check whether you are on a network that inspects traffic, and if you are not, [report it](SECURITY.md). It can also mean our CA changed and the pins need updating, which is our bug.
 
-</details>
-
-<details>
-<summary><b>Linux: "Nerasta saugi raktinė (gnome-keyring arba kwallet)"</b></summary>
-
-No secret service is running, so there is nowhere safe to keep your password. The launcher refuses rather than falling back to Chromium's `basic_text` backend, which "encrypts" with a key anyone can look up. Install and start `gnome-keyring` or `kwallet`; the `.deb` already pulls in `libsecret`. Standard desktops have one running.
-
-</details>
-
-<details>
-<summary><b>The 3D character does not appear</b></summary>
-
-Virtual machines usually have no GPU and their display adapters are on Chromium's WebGL blocklist. The launcher falls back to software rendering, and to a flat 2D skin if even that is unavailable. Everything else works normally either way.
-
-</details>
-
-<details>
-<summary><b>"Nepavyko pasiekti mctema.lt"</b></summary>
-
-A network hiccup, common on VM NAT or right after waking from sleep. Read-only requests retry automatically; press refresh if it persists.
-
-</details>
-
-<details>
-<summary><b>"Saugumo klaida: nepatikimas sertifikatas"</b></summary>
-
-The launcher pins the public keys behind `mctema.lt` and refused a certificate that did not match. That is what an intercepted connection looks like, so treat it seriously: check whether you are on a network that inspects traffic, such as some corporate or school wifi. If you are not, please [report it](SECURITY.md). It can also mean our certificate authority changed and the pins need updating - our bug, not yours.
-
-</details>
-
-<details>
-<summary><b>Updating the Linux .deb asks for a password</b></summary>
-
-Installing a `.deb` requires root, so the updater elevates. The AppImage updates without any prompt.
-
-</details>
+**Updating the `.deb` asks for a password.** Installing a `.deb` needs root. The AppImage updates without prompting.
 
 ## Development
 
 ```bash
 npm install
-npm run download-jre         # Temurin JRE 21 into assets/jre (Windows)
+npm run download-jre   # Temurin JRE 21 into assets/jre
 npm start
 ```
 
@@ -275,26 +138,18 @@ npm start
 | `npm run dist` | Windows installer (NSIS), output in `build/` |
 | `npm run dist-linux` | Linux AppImage and `.deb` |
 
-The first three run in CI and gate every pull request. Game files live in `%APPDATA%\.mctema` on Windows and `~/.config/.mctema` on Linux. `lib/mclc/` is a vendored fork of minecraft-launcher-core, deliberately kept close to upstream.
+The first three run in CI and gate every pull request. Game files live in `%APPDATA%\.mctema` on Windows and `~/.config/.mctema` on Linux. `lib/mclc/` is a vendored fork of minecraft-launcher-core, kept close to upstream on purpose. Contributions welcome - see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Contributions welcome - see [CONTRIBUTING.md](CONTRIBUTING.md).
-
-<details>
-<summary><b>Publishing a release</b></summary>
-
-Updates are verified against a manifest signed with an offline Ed25519 key; the public half lives in [`lib/release-verify.js`](lib/release-verify.js).
+**Publishing a release.** Build, sign, then upload the installer, its `.blockmap`, `latest.yml` and `manifest-<version>.json`:
 
 ```bash
 npm run dist
 MCTEMA_SIGNING_KEY=/path/to/release-key.pem \
   node scripts/sign-release.js build/MCTemaLauncher-Setup-<version>.exe
-# upload the installer, its .blockmap, latest.yml and manifest-<version>.json
 ```
 
-> [!IMPORTANT]
-> The private key never belongs on the server or in this repository. Hash the artifacts on the machine holding the key - a signature over hashes computed by the server that serves the files proves nothing. Skip the manifest and launchers will download the update, fail verification and silently stay put.
-
-</details>
+> [!CAUTION]
+> The signing key never belongs on the server or in this repository, and the artifacts must be hashed on the machine holding it - a signature over hashes computed by the server that serves the files proves nothing. Forget the manifest and launchers will download the update, fail the check and quietly stay where they are.
 
 ## License
 
