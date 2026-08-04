@@ -102,6 +102,40 @@ The launcher is open source so this section can be checked rather than believed.
 
 <img src=".github/trust-boundaries.svg" alt="Trust boundaries: the password stops at the launcher, only a single-use ticket reaches the game" width="100%">
 
+### What we assume an attacker can do
+
+Everything below is written against this list, not against a vague wish to be secure.
+
+- Sit between you and `mctema.lt` - public wifi, a hostile ISP, or a proxy with its own CA installed on your machine.
+- Serve you a modified installer, or take over the update feed itself.
+- Read anything inside the Minecraft process. Mods share one JVM and you can install your own, so treat that whole environment as public.
+- Run a modified launcher, or skip it and talk to the API with curl. The client is not trusted with anything.
+- Read this source. Nothing here depends on you not knowing how it works.
+
+### Controls
+
+| Layer | Holds against | How |
+|---|---|---|
+| **Transport** | Interception, rogue or compelled CA | Every call to `mctema.lt` is refused unless the chain contains a key pinned in [`lib/pinned-http.js`](lib/pinned-http.js). A second CA is pinned as backup so a certificate change cannot lock everyone out, and CAA records stop any other CA issuing for the domain at all. |
+| **Identity** | Credential theft, replay | Password verified server-side against AuthMe, then never sent again. Tokens are 32 random bytes and the server keeps only their SHA-256, so a database leak yields nothing usable. Refresh tokens are single-use: one seen twice means a copy is circulating, so the whole login is revoked. Theft becomes visible instead of silent. |
+| **Authorization** | Privilege crossing between surfaces | Tokens are scoped. The one handed to the game reaches the presence beat and nothing else, so stealing it buys the ability to look like you are playing. Prices and balances are decided server-side; the client sends the price it displayed only so the server can refuse when they disagree. |
+| **Supply chain** | Malicious update or mod | Updates install only when a manifest signed with an offline key vouches for that exact version and hash. Optional mods are checked against Modrinth's SHA-512 and Minecraft files against Mojang's hashes before anything loads as code. Bundled client mods are re-hashed on every launch, not just at install. |
+| **Local process** | A bug in our own UI | The interface runs with no Node and no network, reaches the rest only through named IPC, and cannot navigate away from the bundled page. Values read back from settings are validated before they touch a filesystem path, because that file is writable by anything running as you. |
+| **Data at rest** | Someone reading files off the disk | Credentials go through the OS keystore, DPAPI or libsecret. On Linux the launcher refuses to save rather than fall back to Chromium's `basic_text` backend, which "encrypts" with a key anyone can look up. |
+| **Abuse** | A modified client hammering the API | Per-account limits on the endpoints that cost us something. The thresholds are not published, for the same reason you do not print the alarm code on the door. |
+
+### Not covered
+
+Worth being straight about, since a threat model that claims everything is worth nothing.
+
+- **Anyone with administrator access to your machine.** They can read the keystore, patch the launcher, or just install a keylogger. No client-side control survives that.
+- **Code signing.** The installer is unsigned ([#5](https://github.com/Noldez/MCTemaLauncher/issues/5)), so SmartScreen has no reputation to go on and you verify by checksum instead. This is the gap we would close first.
+- **A CA inside the CAA set being compromised** and issuing a certificate that also matches a pinned root. Pinning narrows this to two authorities, it does not eliminate it.
+- **Whatever is already on your account.** If someone knows your password, the launcher is not what stops them; change it in game and every session dies with it.
+
+<details>
+<summary>Same controls, listed per subsystem</summary>
+
 | Area | What protects it |
 |---|---|
 | **Transport** | Every call to `mctema.lt` is refused unless the chain contains a key pinned in [`lib/pinned-http.js`](lib/pinned-http.js). A rogue CA, corporate proxy or hostile wifi cannot read your credentials. A second CA is pinned as backup, and CAA records stop any other CA issuing for the domain. |
@@ -113,6 +147,8 @@ The launcher is open source so this section can be checked rather than believed.
 | **The game process** | Mods share one JVM and can read its environment, so the launcher assumes anything it puts there is public. It passes a single-use login ticket and a presence-only token. The password is not there at all. |
 | **Downloads** | Minecraft files checked against Mojang's hashes, optional mods against Modrinth's SHA-512, before anything loads as code. Bundled client mods are re-hashed on every launch, not just at install. |
 | **Telemetry** | None. The one exception is manual: after a crash you may press *Siųsti logą*, and the log is stripped of your account name and home directory before it leaves. |
+
+</details>
 
 ## How it works
 
