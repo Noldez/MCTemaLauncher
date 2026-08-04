@@ -105,12 +105,13 @@ The launcher is open source so this section can be checked rather than believed.
 | Layer | Holds against | How |
 |---|---|---|
 | **Transport** | Interception, rogue or compelled CA | Every call to `mctema.lt` is refused unless the chain contains a key pinned in [`lib/pinned-http.js`](lib/pinned-http.js). A second CA is pinned as backup so a certificate change cannot lock everyone out, and CAA records stop any other CA issuing for the domain at all. |
-| **Identity** | Credential theft, replay | Password verified server-side against AuthMe, then never sent again. Tokens are 32 random bytes and the server keeps only their SHA-256, so a database leak yields nothing usable. Refresh tokens are single-use: one seen twice means a copy is circulating, so the whole login is revoked. Theft becomes visible instead of silent. |
+| **Identity** | Credential theft, replay | Password verified server-side against AuthMe, then never sent again. Tokens are 32 random bytes and the server keeps only their SHA-256, so a database leak yields nothing usable. Refresh tokens are single-use: one seen twice means a copy is circulating, so the whole login is revoked. Theft becomes visible instead of silent. Logging out retires the token server-side, and changing your password in game kills every session you have. |
 | **Authorization** | Privilege crossing between surfaces | Tokens are scoped. The one handed to the game reaches the presence beat and nothing else, so stealing it buys the ability to look like you are playing. Prices and balances are decided server-side; the client sends the price it displayed only so the server can refuse when they disagree. |
 | **Supply chain** | Malicious update or mod | Updates install only when a manifest signed with an offline key vouches for that exact version and hash. Optional mods are checked against Modrinth's SHA-512 and Minecraft files against Mojang's hashes before anything loads as code. Bundled client mods are re-hashed on every launch, not just at install. |
 | **Local process** | A bug in our own UI | The interface runs with no Node and no network, reaches the rest only through named IPC, and cannot navigate away from the bundled page. Values read back from settings are validated before they touch a filesystem path, because that file is writable by anything running as you. |
 | **Data at rest** | Someone reading files off the disk | Credentials go through the OS keystore, DPAPI or libsecret. On Linux the launcher refuses to save rather than fall back to Chromium's `basic_text` backend, which "encrypts" with a key anyone can look up. |
 | **Abuse** | A modified client hammering the API | Per-account limits on the endpoints that cost us something. The thresholds are not published, for the same reason you do not print the alarm code on the door. |
+| **Telemetry** | Us collecting things you did not agree to | There is none. The one exception is manual: after a crash you can press *Siųsti logą*, and even then the log has your account name and home path stripped out before it leaves. |
 
 ### Not covered
 
@@ -121,22 +122,6 @@ Worth being straight about, since a list that claims everything is worth nothing
 - **A CA inside the CAA set being compromised** and issuing a certificate that also matches a pinned root. Pinning narrows this to two authorities, it does not eliminate it.
 - **Whatever is already on your account.** If someone knows your password, the launcher is not what stops them; change it in game and every session dies with it.
 
-<details>
-<summary>Same controls, listed per subsystem</summary>
-
-| Area | What protects it |
-|---|---|
-| **Transport** | Every call to `mctema.lt` is refused unless the chain contains a key pinned in [`lib/pinned-http.js`](lib/pinned-http.js). A rogue CA, corporate proxy or hostile wifi cannot read your credentials. A second CA is pinned as backup, and CAA records stop any other CA issuing for the domain. |
-| **Updates** | Installed only if a manifest signed with an **offline** Ed25519 key vouches for that exact version and file hash. The key is not on the server, so controlling the update feed is not enough to ship code to players. |
-| **The UI** | Locked to the bundled page: navigation, `window.open` and webviews are refused, links go to your browser, permission requests are denied. A bug in the interface cannot become remote code. |
-| **Credentials** | OS keystore only. On Linux the launcher refuses to save anything when just Chromium's `basic_text` backend is available, because that "encryption" uses a hardcoded key. |
-| **Session tokens** | 32 random bytes; the server keeps only their SHA-256, so a database leak yields nothing usable. Logging out revokes the token; changing your password kills every session. |
-| **Refresh tokens** | Rotate, single-use. A token seen twice means a copy is in circulation, so the whole login is revoked - theft becomes visible instead of silent. |
-| **The game process** | Mods share one JVM and can read its environment, so the launcher assumes anything it puts there is public. It passes a single-use login ticket and a presence-only token. The password is not there at all. |
-| **Downloads** | Minecraft files checked against Mojang's hashes, optional mods against Modrinth's SHA-512, before anything loads as code. Bundled client mods are re-hashed on every launch, not just at install. |
-| **Telemetry** | None. The one exception is manual: after a crash you may press *Siųsti logą*, and the log is stripped of your account name and home directory before it leaves. |
-
-</details>
 
 ## How it works
 
