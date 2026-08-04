@@ -70,7 +70,10 @@
     $('sm-price').textContent = fmt(price(s));
     $('sm-after').textContent = fmt(balance - price(s));
     $('sm-err').classList.add('hidden');
+    // Every modal open starts from a known-enabled state, regardless of how the previous
+    // one ended (success left sm-cancel disabled otherwise - see task-9 fix report).
     $('sm-buy').disabled = false;
+    $('sm-cancel').disabled = false;
     $('shop-modal').classList.remove('hidden');
   }
 
@@ -108,6 +111,7 @@
     if (r && r.ok) {
       setBalance(r.auksiniai);
       inFlight = false;
+      $('sm-cancel').disabled = false;
       closeConfirm();
       document.dispatchEvent(new CustomEvent('notify', {
         detail: { text: `Nupirkta: ${s.name}. Pristatoma žaidime.`, kind: 'info' },
