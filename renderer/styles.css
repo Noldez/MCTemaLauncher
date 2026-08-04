@@ -824,3 +824,46 @@ body { background: var(--bg); color: var(--ink); font-family: 'Poppins', sans-se
 .pg-title { font-size: 20px; font-weight: 800; letter-spacing: 5px; }
 .pg-sub { color: var(--muted); font-size: 12.5px; margin: 6px 0 18px; }
 .sect-label { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: var(--ink); margin: 18px 0 10px; }
+
+/* ---- shop ---- */
+#view-shop { padding: 26px 30px; overflow-y: auto; }
+.shop-head { display: flex; align-items: center; gap: 18px; margin-bottom: 6px; }
+.shop-head .sect-label { margin: 0; }
+.shop-balance { font-size: 13px; color: var(--muted); }
+.shop-balance b { color: var(--ink); font-size: 16px; }
+.shop-actions { margin-left: auto; display: flex; gap: 8px; }
+.shop-btn { background: rgba(10,10,12,.55); border: 1px solid var(--line2); border-radius: 8px;
+  color: var(--ink); font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: .5px;
+  padding: 8px 14px; cursor: pointer; transition: border-color .15s; }
+.shop-btn:hover { border-color: var(--teal); }
+.shop-cat { font-size: 12px; font-weight: 800; letter-spacing: 1.5px; color: var(--faint);
+  margin: 18px 0 10px; }
+.shop-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.shop-item { display: flex; align-items: center; gap: 12px; text-align: left;
+  background: rgba(10,10,12,.45); border: 1px solid var(--line2); border-radius: 12px; padding: 12px;
+  cursor: pointer; font-family: inherit; color: var(--ink); transition: border-color .15s, transform .15s; }
+.shop-item:hover { border-color: var(--teal); transform: translateY(-2px); }
+.si-art img { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; display: block; }
+.si-meta { flex: 1; display: grid; gap: 2px; min-width: 0; }
+.si-meta b { font-size: 13px; }
+.si-desc { font-size: 11px; color: var(--faint); overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; }
+.si-price { display: grid; justify-items: end; gap: 1px; }
+.si-price s { font-size: 10px; color: var(--faint); }
+.si-price b { font-size: 14px; color: #eab308; }
+.si-price i { font-style: normal; font-size: 9px; color: var(--faint); }
+.shop-empty { color: var(--faint); font-size: 13px; }
+.shop-modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex;
+  align-items: center; justify-content: center; z-index: 60; }
+.shop-modal.hidden { display: none; }
+.sm-box { width: 320px; background: #101318; border: 1px solid var(--line2); border-radius: 14px;
+  padding: 20px; display: grid; gap: 10px; }
+.sm-title { font-size: 16px; font-weight: 800; }
+.sm-line { font-size: 12px; color: var(--muted); }
+.sm-line b { color: var(--ink); }
+.sm-err { font-size: 12px; color: var(--red); }
+.sm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.sm-actions button { background: rgba(10,10,12,.55); border: 1px solid var(--line2); border-radius: 8px;
+  color: var(--ink); font-family: inherit; font-size: 12px; font-weight: 700; padding: 8px 16px;
+  cursor: pointer; }
+.sm-actions .primary { border-color: var(--teal); }
