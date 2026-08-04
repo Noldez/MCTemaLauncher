@@ -366,6 +366,26 @@
     </div>
   </div>
 
+  <div id="crash-modal" class="crash-modal hidden">
+    <div class="cr-box">
+      <button id="cr-close" class="cr-x" title="Uždaryti"><i class="fa-solid fa-xmark"></i></button>
+      <div class="cr-art"><i class="fa-solid fa-heart-crack"></i></div>
+      <div class="cr-title">Žaidimas nulūžo</div>
+      <div class="cr-sub" id="cr-sub">-</div>
+      <div id="cr-cause-wrap" class="cr-cause-wrap hidden">
+        <div class="cr-cause-label">SPĖJAMA PRIEŽASTIS</div>
+        <div class="cr-cause" id="cr-cause">-</div>
+      </div>
+      <button id="cr-relaunch" class="cr-primary"><i class="fa-solid fa-rotate-right"></i> Paleisti iš naujo</button>
+      <div class="cr-row">
+        <button id="cr-send"><i class="fa-solid fa-paper-plane"></i> Siųsti logą</button>
+        <button id="cr-copy"><i class="fa-solid fa-copy"></i> Kopijuoti logą</button>
+      </div>
+      <div id="cr-sent" class="cr-sent hidden"></div>
+      <div class="cr-foot">Jei problema kartojasi - parašyk mums <button class="cr-link" id="cr-discord">Discord</button>.</div>
+    </div>
+  </div>
+
   <div id="login-gate" class="login-gate hidden">
     <div class="lg-left">
       <img src="logo.png" alt="" class="lg-logo">
@@ -414,6 +434,7 @@
   <script src="views/locker.js"></script>
   <script src="views/mods.js"></script>
   <script src="views/shop.js"></script>
+  <script src="crash.js"></script>
   <script src="views/settings.js"></script>
 </body>
 </html>

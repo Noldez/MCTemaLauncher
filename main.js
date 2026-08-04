@@ -18,6 +18,7 @@ const { createRichPresence } = require('./lib/rpc');
 const { initUpdater: startUpdater } = require('./lib/updater');
 const { createToastStack } = require('./lib/toasts');
 const { mapPosts, absolutizeImage } = require('./lib/news');
+const { createLogBuffer, suspectCause } = require('./lib/crash');
 const { autoUpdater } = require('electron-updater');
 
 // Software WebGL fallback for GPU-less machines (VMs, blocklisted drivers);
@@ -387,6 +388,26 @@ ipcMain.on('open-external', (_e, url) => {
 });
 
 ipcMain.handle('app:version', () => app.getVersion());
+
+// Crash reporting: the dialog's Siusti loga ships the console tail so support
+// tickets arrive with the evidence attached. Best effort - the report id comes
+// back for the player to quote.
+ipcMain.handle('crash:send', async () => {
+  const logText = crashBuf.text();
+  if (!logText) return { ok: false, error: 'Logas tuščias.' };
+  return friendsApi('POST', '/api/launcher/crash-report', {
+    log: logText.slice(-256 * 1024),
+    exitCode: lastExitCode,
+    launcherVersion: app.getVersion(),
+    os: `${process.platform} ${require('os').release()}`,
+    suspectedCause: suspectCause(logText) || undefined,
+  });
+});
+
+ipcMain.handle('crash:copy', () => {
+  clipboard.writeText(crashBuf.text());
+  return { ok: true };
+});
 
 ipcMain.handle('config:get', () => loadConfig());
 
@@ -837,6 +858,9 @@ ipcMain.handle('omods:remove', (_e, id) => {
 
 let launching = false;
 let sessionStart = null;
+// Tail of the game console for the crash dialog and the Siusti loga report.
+const crashBuf = createLogBuffer();
+let lastExitCode = null;
 
 ipcMain.handle('game:play', async (_e, payload) => {
   const username = String((payload && payload.username) || '').trim();
@@ -852,9 +876,14 @@ ipcMain.handle('game:play', async (_e, payload) => {
   saveConfig({ ...cfg, username, ram });
 
   const send = (channel, data) => {
+    // Every console line also lands in the crash buffer, so a non-zero exit
+    // already has its evidence collected.
+    if (channel === 'mc:log') crashBuf.push(data);
     if (win && !win.isDestroyed()) win.webContents.send(channel, data);
   };
   const log = (m) => send('mc:log', `[MC Tema] ${m}`);
+  crashBuf.reset();
+  lastExitCode = null;
 
   const launcher = new Client();
   launcher.on('progress', (e) => send('mc:progress', e));
@@ -872,6 +901,10 @@ ipcMain.handle('game:play', async (_e, payload) => {
     setRpc('Launcheryje', SERVER.host, true);
     log(`Zaidimo procesas baigtas (kodas ${code}).`);
     if (win && !win.isDestroyed()) { win.show(); win.focus(); }
+    if (code !== 0 && code != null) {
+      lastExitCode = code;
+      send('crash:show', { exitCode: code, suspectedCause: suspectCause(crashBuf.text()) });
+    }
   });
 
   let fabricProfile;

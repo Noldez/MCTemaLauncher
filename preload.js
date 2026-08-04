@@ -57,4 +57,7 @@ contextBridge.exposeInMainWorld('api', {
   onLaunched: (cb) => ipcRenderer.on('mc:launched', () => cb()),
   onClosed: (cb) => ipcRenderer.on('mc:closed', (_e, c) => cb(c)),
   onUpdate: (cb) => ipcRenderer.on('app:update', (_e, u) => cb(u)),
+  onCrash: (cb) => ipcRenderer.on('crash:show', (_e, p) => cb(p)),
+  crashSend: () => ipcRenderer.invoke('crash:send'),
+  crashCopy: () => ipcRenderer.invoke('crash:copy'),
 });
