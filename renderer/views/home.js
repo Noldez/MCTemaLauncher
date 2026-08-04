@@ -124,28 +124,8 @@
   refreshDiscord();
   setInterval(refreshDiscord, 60000);
 
-  (() => {
-    const { el, headUrl } = window.ui;
-    const row = document.getElementById('streams-row');
-    if (!row) return;
-    const MOCK = [
-      { name: 'Tadassi', platform: 'twitch', viewers: 132, title: 'Spawn turas prieš startą', thumb: 'hero.webp', url: 'https://www.twitch.tv/' },
-      { name: 'PixelKaralius', platform: 'youtube', viewers: 87, title: 'Survival pradžia LIVE', thumb: 'news-2.webp', url: 'https://www.youtube.com/' },
-    ];
-    MOCK.forEach((s) => {
-      const c = el('button', 'stream-pill');
-      const av = el('span', 'sp-av');
-      const head = el('img'); head.src = headUrl(s.name, 34);
-      av.append(head, el('i', 'sp-dot'));
-      const mm = el('span', 'sp-meta');
-      mm.append(el('b', null, s.name), el('span', null, s.title));
-      const v = el('span', 'sp-count');
-      v.innerHTML = `<i class="fa-brands fa-${s.platform === 'twitch' ? 'twitch' : 'youtube'}"></i> ${s.viewers}`;
-      c.append(av, mm, v);
-      c.addEventListener('click', () => window.ui.openUrl(s.url));
-      row.append(c);
-    });
-  })();
+  // The DABAR TRANSLIUOJA strip stays hidden until a real streams API exists
+  // (issue #23) - it used to render hardcoded mock streamers here.
 
   const LAUNCH_AT = new Date(2026, 7, 15, 19, 0, 0);
   function tickNews() {
