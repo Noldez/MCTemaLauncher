@@ -73,41 +73,7 @@
   document.querySelector('.rail-btn[data-view="home"]').addEventListener('click', loadChar);
   document.addEventListener('cfg', loadChar);
 
-  (() => {
-    const hero = document.querySelector('.hero');
-    const cv = $('hero-fx');
-    if (!hero || !cv) return;
-    const ctx = cv.getContext('2d');
-    let W = 0, H = 0;
-    const resize = () => { W = cv.width = hero.clientWidth; H = cv.height = hero.clientHeight; };
-    new ResizeObserver(resize).observe(hero);
-    resize();
-    const rnd = (a, b) => a + Math.random() * (b - a);
-    const spawn = (y) => ({ x: rnd(0, 1), y: y != null ? y : rnd(0, 1), r: rnd(0.8, 2.3),
-      s: rnd(6, 18), w: rnd(0.2, 0.9), p: rnd(0, Math.PI * 2),
-      a: rnd(0.2, 0.6), g: Math.random() < 0.8 });
-    const parts = Array.from({ length: 42 }, () => spawn());
-    let last = performance.now();
-    (function tick(now) {
-      const dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
-      ctx.clearRect(0, 0, W, H);
-      for (const p of parts) {
-        p.y -= (p.s * dt) / (H || 1);
-        p.p += p.w * dt;
-        if (p.y < -0.05) Object.assign(p, spawn(1.05));
-        const tw = 0.6 + Math.sin(p.p * 2) * 0.4;
-        ctx.beginPath();
-        ctx.arc(p.x * W + Math.sin(p.p) * 14, p.y * H, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = p.g ? `rgba(74,222,128,${p.a * tw})` : `rgba(220,240,230,${p.a * tw * 0.8})`;
-        ctx.shadowColor = 'rgba(74,222,128,.8)';
-        ctx.shadowBlur = p.g ? 6 : 3;
-        ctx.fill();
-      }
-      ctx.shadowBlur = 0;
-      requestAnimationFrame(tick);
-    })(last);
-  })();
+  window.ui.ambientFx(document.querySelector('.hero'), $('hero-fx'));
 
   const btn = $('btn-play');
   const setBusy = (busy, label) => { btn.disabled = busy; btn.querySelector('.launch-word').textContent = label; };
