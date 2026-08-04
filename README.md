@@ -100,19 +100,7 @@ gh attestation verify MCTemaLauncher-Setup.exe --repo Noldez/MCTemaLauncher
 
 The launcher is open source so this section can be checked rather than believed. Found something? See [SECURITY.md](SECURITY.md).
 
-```mermaid
-flowchart LR
-    U["Player"] -->|password, once| L["Launcher<br/>main process"]
-    L -->|pinned TLS| API["mctema.lt API"]
-    L -->|OS keystore| K["auth.dat<br/>DPAPI / libsecret"]
-    L -->|one-shot ticket only| G["Minecraft JVM<br/>third-party mods"]
-    API -.->|signed manifest| L
-    R["Renderer UI<br/>no Node, no network"] -->|named IPC only| L
-
-    style G fill:#3b1f1f,stroke:#a33
-    style API fill:#1f2d3b,stroke:#39a
-    style L fill:#1f3b25,stroke:#3a6
-```
+<img src=".github/trust-boundaries.svg" alt="Trust boundaries: the password stops at the launcher, only a single-use ticket reaches the game" width="100%">
 
 | Area | What protects it |
 |---|---|
@@ -128,22 +116,7 @@ flowchart LR
 
 ## How it works
 
-```mermaid
-flowchart TD
-    subgraph Launcher
-        M["main.js<br/>filesystem + network"]
-        P["preload.js<br/>narrow window.api"]
-        R["renderer/<br/>UI, isolated"]
-        LB["lib/<br/>pinned-http · credentials<br/>mods · config · crash"]
-        R <--> P
-        P <--> M
-        M --> LB
-    end
-    M --> API["mctema.lt"]
-    M --> MOJ["Mojang · Fabric"]
-    M --> MOD["Modrinth"]
-    M --> MC["Minecraft JVM"]
-```
+<img src=".github/architecture.svg" alt="Process layout: isolated interface, narrow bridge, main process with disk and network access, and the hosts it contacts" width="100%">
 
 <details>
 <summary><b>The three processes</b></summary>

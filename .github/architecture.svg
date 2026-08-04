@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 300" width="920" height="300" role="img" aria-label="Architecture: interface, bridge and main process, and the hosts the launcher contacts">
+  <defs>
+    <linearGradient id="card2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#101318"/>
+      <stop offset="1" stop-color="#0b0d10"/>
+    </linearGradient>
+    <radialGradient id="glowG2" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#4ade80" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#4ade80" stop-opacity="0"/>
+    </radialGradient>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#5c6672"/>
+    </marker>
+  </defs>
+
+  <style>
+    .t2 { font-family: "Segoe UI", system-ui, -apple-system, sans-serif; }
+    .lbl  { font-size: 10px; font-weight: 700; letter-spacing: 2px; fill: #5c6672; }
+    .nd   { font-size: 13px; font-weight: 600; fill: #f2f2f4; }
+    .sb   { font-size: 10.5px; fill: #8b8b93; }
+    .mono { font-family: Consolas, "SF Mono", monospace; font-size: 10.5px; fill: #8b8b93; }
+    .monoG{ font-family: Consolas, "SF Mono", monospace; font-size: 11px; fill: #4ade80; }
+  </style>
+
+  <rect width="920" height="300" rx="16" fill="url(#card2)"/>
+  <text class="t2 lbl" x="36" y="32">PROCESS LAYOUT</text>
+  <text class="t2 lbl" x="648" y="32">CONTACTS</text>
+
+  <!-- renderer -->
+  <rect x="36" y="52" width="176" height="86" rx="12" fill="#151a21" stroke="#2a3340"/>
+  <text class="t2 nd" x="54" y="80">Interface</text>
+  <text class="t2 mono" x="54" y="100">renderer/</text>
+  <text class="t2 sb" x="54" y="120">isolated, no Node</text>
+
+  <!-- preload bridge -->
+  <rect x="248" y="52" width="140" height="86" rx="12" fill="#151a21" stroke="#2a3340" stroke-dasharray="5 4"/>
+  <text class="t2 nd" x="266" y="80">Bridge</text>
+  <text class="t2 mono" x="266" y="100">preload.js</text>
+  <text class="t2 sb" x="266" y="120">named calls</text>
+
+  <!-- main -->
+  <ellipse cx="512" cy="95" rx="120" ry="72" fill="url(#glowG2)"/>
+  <rect x="424" y="52" width="176" height="86" rx="12" fill="#12181a" stroke="#4ade80" stroke-opacity=".55"/>
+  <text class="t2 nd" x="442" y="80">Main process</text>
+  <text class="t2 mono" x="442" y="100">main.js</text>
+  <text class="t2 sb" x="442" y="120">disk and network</text>
+
+  <!-- lib -->
+  <rect x="248" y="176" width="352" height="94" rx="12" fill="#131820" stroke="#2a3340"/>
+  <text class="t2 nd" x="266" y="202">Testable core</text>
+  <text class="t2 mono" x="266" y="222">lib/pinned-http · credentials · mods</text>
+  <text class="t2 mono" x="266" y="240">lib/release-verify · crash · config</text>
+  <text class="t2 sb"   x="266" y="258">plain Node, unit tested, no Electron needed</text>
+
+  <!-- contacts -->
+  <rect x="648" y="52" width="236" height="218" rx="12" fill="#ffffff" fill-opacity=".016" stroke="#ffffff" stroke-opacity=".07"/>
+  <text class="t2 monoG" x="668" y="82">mctema.lt</text>
+  <text class="t2 sb"    x="668" y="98">accounts, friends, news, shop</text>
+  <text class="t2 mono"  x="668" y="128">Mojang · Fabric</text>
+  <text class="t2 sb"    x="668" y="144">game files, hash verified</text>
+  <text class="t2 mono"  x="668" y="174">api.modrinth.com</text>
+  <text class="t2 sb"    x="668" y="190">optional mods, sha512 checked</text>
+  <text class="t2 mono"  x="668" y="220">mc-heads.net</text>
+  <text class="t2 sb"    x="668" y="236">skin and avatar images</text>
+  <text class="t2 sb"    x="668" y="258" font-size="10">nothing else is contacted</text>
+
+  <!-- edges -->
+  <path d="M212 95 L240 95" fill="none" stroke="#5c6672" stroke-width="1.4" marker-end="url(#ar2)"/>
+  <path d="M388 95 L416 95" fill="none" stroke="#5c6672" stroke-width="1.4" marker-end="url(#ar2)"/>
+  <path d="M600 95 L640 95" fill="none" stroke="#4ade80" stroke-opacity=".7" stroke-width="1.6" marker-end="url(#ar2)"/>
+  <path d="M488 138 L488 168" fill="none" stroke="#5c6672" stroke-width="1.4" marker-end="url(#ar2)"/>
+</svg>
