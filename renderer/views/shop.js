@@ -4,7 +4,6 @@
   const price = (s) => (s.salePriceCents != null ? s.salePriceCents : s.priceCents);
 
   let balance = 0;
-  let haveData = false;
   let pending = null;
   let inFlight = false;
   let allServices = [];
@@ -58,7 +57,6 @@
       list.append(retry);
       return;
     }
-    haveData = true;
     setBalance(r.auksiniai);
     allServices = (r.categories || []).flatMap((c) => c.services || []);
     renderCatalog(r.categories);
@@ -153,8 +151,15 @@
     b.addEventListener('click', () => window.ui.openUrl(b.dataset.url)));
 
   document.querySelector('.rail-btn[data-view="shop"]').addEventListener('click', load);
-  // Fill the hero balance callout without opening the view; retry after login
-  // (the cfg event fires once credentials land).
-  document.addEventListener('cfg', () => { if (!haveData) load(); });
+  // Fill the hero balance callout without opening the view; also reload on every cfg event
+  // (fired on startup config load and after login), not just the first one - cfg also fires
+  // on logging in as a different account, and gating on haveData left the previous account's
+  // balance/catalog on screen until the shop button was clicked. The GET is cheap.
+  document.addEventListener('cfg', () => {
+    $('shop-auks').textContent = '-';
+    const hero = $('co-auks');
+    if (hero) hero.textContent = '-';
+    load();
+  });
   load();
 })();
