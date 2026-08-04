@@ -17,7 +17,7 @@ const { stageMods, resolveJava: resolveBundledJava } = require('./lib/mods');
 const { createRichPresence } = require('./lib/rpc');
 const { initUpdater: startUpdater } = require('./lib/updater');
 const { createToastStack } = require('./lib/toasts');
-const { mapPosts } = require('./lib/news');
+const { mapPosts, absolutizeImage } = require('./lib/news');
 const { autoUpdater } = require('electron-updater');
 
 // Software WebGL fallback for GPU-less machines (VMs, blocklisted drivers);
@@ -148,6 +148,10 @@ const FRIEND_ERR = {
   NOT_FRIENDS: 'Rašyti galima tik draugams.',
   TOO_LARGE: 'Failas per didelis (iki 8 MB).',
   BAD_FILE: 'Netinkamas failas.',
+  SERVICE: 'Paslauga neberasta.',
+  PRICE: 'Kaina pasikeitė - sąrašas atnaujintas.',
+  BALANCE: 'Nepakanka auksinių.',
+  RATE: 'Per daug pirkimų iš eilės - palauk minutę.',
 };
 
 /**
@@ -202,7 +206,8 @@ async function friendsApi(method, apiPath, body) {
   }
   if (r.error) return { ok: false, error: 'Nepavyko pasiekti mctema.lt.' };
   if (r.json && r.json.ok) return r.json;
-  return { ok: false, error: FRIEND_ERR[r.json && r.json.error] || 'Kažkas nepavyko.' };
+  const code = (r.json && r.json.error) || null;
+  return { ok: false, code, error: FRIEND_ERR[code] || 'Kažkas nepavyko.' };
 }
 
 ipcMain.handle('friends:list', () => friendsApi('GET', '/api/launcher/friends'));
@@ -210,6 +215,22 @@ ipcMain.handle('friends:request', (_e, to) => friendsApi('POST', '/api/launcher/
 ipcMain.handle('friends:respond', (_e, p) => friendsApi('POST', '/api/launcher/friends/respond', { id: Number(p && p.id), accept: !!(p && p.accept) }));
 ipcMain.handle('friends:cancel', (_e, id) => friendsApi('POST', '/api/launcher/friends/cancel', { id: Number(id) }));
 ipcMain.handle('friends:remove', (_e, nick) => friendsApi('POST', '/api/launcher/friends/remove', { nick: String(nick || '') }));
+
+ipcMain.handle('shop:data', async () => {
+  const r = await friendsApi('GET', '/api/launcher/shop');
+  if (r && r.ok && Array.isArray(r.categories)) {
+    // Service images obey the same origin policy as news images.
+    for (const c of r.categories) {
+      for (const s of c.services || []) s.imageUrl = absolutizeImage(s.imageUrl);
+    }
+  }
+  return r;
+});
+
+ipcMain.handle('shop:purchase', (_e, p) => friendsApi('POST', '/api/launcher/shop/purchase', {
+  serviceId: Number(p && p.serviceId),
+  expectedPriceCents: Number(p && p.expectedPriceCents),
+}));
 
 ipcMain.handle('chat:inbox', () => friendsApi('GET', '/api/launcher/messages/inbox'));
 ipcMain.handle('chat:history', (_e, p) => {

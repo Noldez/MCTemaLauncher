@@ -45,6 +45,8 @@ contextBridge.exposeInMainWorld('api', {
   friendRespond: (p) => ipcRenderer.invoke('friends:respond', p),
   friendCancel: (id) => ipcRenderer.invoke('friends:cancel', id),
   friendRemove: (nick) => ipcRenderer.invoke('friends:remove', nick),
+  shopData: () => ipcRenderer.invoke('shop:data'),
+  shopPurchase: (p) => ipcRenderer.invoke('shop:purchase', p),
   chatInbox: () => ipcRenderer.invoke('chat:inbox'),
   chatHistory: (p) => ipcRenderer.invoke('chat:history', p),
   chatSend: (p) => ipcRenderer.invoke('chat:send', p),
