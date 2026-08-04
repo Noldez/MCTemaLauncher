@@ -20,23 +20,24 @@
     if (hero) hero.textContent = fmt(n);
   }
 
-  function itemCard(s) {
-    const card = el('button', 'shop-item');
-    const art = el('span', 'si-art');
+  function itemRow(s) {
+    const row = el('button', 'shop-item');
     if (s.imageUrl) {
+      const art = el('span', 'si-art');
       const img = el('img');
       img.src = s.imageUrl;
       img.alt = '';
       art.append(img);
+      row.append(art);
     }
     const meta = el('span', 'si-meta');
     meta.append(el('b', null, s.name), el('span', 'si-desc', s.description || ''));
     const tag = el('span', 'si-price');
     if (s.salePriceCents != null) tag.append(el('s', null, fmt(s.priceCents)));
-    tag.append(el('b', null, fmt(price(s))), el('i', null, 'auksinių'));
-    card.append(art, meta, tag);
-    card.addEventListener('click', () => openConfirm(s));
-    return card;
+    tag.append(el('b', null, fmt(price(s))), el('i', 'fa-solid fa-coins si-coin'));
+    row.append(meta, tag, el('i', 'fa-solid fa-chevron-right si-go'));
+    row.addEventListener('click', () => openConfirm(s));
+    return row;
   }
 
   function renderCatalog(categories) {
@@ -44,9 +45,7 @@
     list.textContent = '';
     categories.filter((c) => (c.services || []).length).forEach((c) => {
       list.append(el('div', 'shop-cat', c.name));
-      const row = el('div', 'shop-row');
-      c.services.forEach((s) => row.append(itemCard(s)));
-      list.append(row);
+      c.services.forEach((s) => list.append(itemRow(s)));
     });
     if (!list.children.length) list.append(el('div', 'shop-empty', 'Parduotuvė tuščia.'));
   }

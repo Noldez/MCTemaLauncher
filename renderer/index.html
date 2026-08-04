@@ -86,7 +86,7 @@
                   <div class="hero-sep"></div>
                   <div class="hero-char">
                     <div class="callout c1"><div class="co-text"><b>12</b><span>lygis</span></div><i class="co-line"></i></div>
-                    <div class="callout c2"><div class="co-text"><b id="co-auks">-</b><span>auksiniai</span></div><i class="co-line"></i></div>
+                    <div class="callout c2"><div class="co-text"><b id="co-auks">-</b><span><i class="fa-solid fa-coins co-coin"></i> auksiniai</span></div><i class="co-line"></i></div>
                     <div class="callout c3"><div class="co-text"><b>#7</b><span>topuose</span></div><i class="co-line"></i></div>
                     <div class="char-stage">
                       <div class="char-platform"><i class="pf-1"></i><i class="pf-2"></i><i class="pf-3"></i></div>
@@ -133,20 +133,24 @@
         </div>
       </section>
       <section class="view" id="view-shop">
-        <div class="shop-head">
-          <div class="sect-label nf">PARDUOTUVĖ</div>
-          <div class="shop-balance">Balansas: <b id="shop-auks">-</b> <span>auksiniai</span></div>
-          <div class="shop-actions">
-            <button class="shop-btn" id="shop-topup"><i class="fa-solid fa-plus"></i> Papildyti</button>
-            <button class="shop-btn" data-url="https://mctema.lt/parduotuve">Atidaryti naršyklėje</button>
+        <div class="shop-wrap">
+          <div class="shop-head">
+            <div>
+              <div class="sect-label">PARDUOTUVĖ</div>
+              <div class="shop-balance"><i class="fa-solid fa-coins"></i><b id="shop-auks">-</b><span>auksinių</span></div>
+            </div>
+            <div class="shop-actions">
+              <button class="shop-topup" id="shop-topup"><i class="fa-solid fa-plus"></i> Papildyti</button>
+              <button class="shop-link" data-url="https://mctema.lt/parduotuve"><i class="fa-solid fa-arrow-up-right-from-square"></i> Atidaryti naršyklėje</button>
+            </div>
           </div>
+          <div id="shop-list" class="shop-list"></div>
         </div>
-        <div id="shop-list" class="shop-list"></div>
         <div id="shop-modal" class="shop-modal hidden">
           <div class="sm-box">
             <div class="sm-title" id="sm-title">-</div>
-            <div class="sm-line">Kaina: <b id="sm-price">-</b> auksinių</div>
-            <div class="sm-line">Liks: <b id="sm-after">-</b> auksinių</div>
+            <div class="sm-line">Kaina: <b id="sm-price">-</b><i class="fa-solid fa-coins sm-coin"></i></div>
+            <div class="sm-line">Liks: <b id="sm-after">-</b><i class="fa-solid fa-coins sm-coin"></i></div>
             <div class="sm-err hidden" id="sm-err"></div>
             <div class="sm-actions">
               <button id="sm-cancel">Atšaukti</button>
