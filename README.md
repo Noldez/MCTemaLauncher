@@ -164,6 +164,24 @@ Game files live in `%APPDATA%\.mctema` on Windows and `~/.config/.mctema` on Lin
 
 Contributions welcome - see [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Signed releases
+
+Updates are verified against a release manifest signed with an offline Ed25519
+key. The launcher fetches the manifest over its certificate-pinned client,
+hashes the installer it downloaded, and installs only if a valid signature
+covers that exact version and hash - so control of the update feed alone is not
+enough to ship code to players. The public key lives in `lib/release-verify.js`.
+
+Publishing a release:
+
+```bash
+npm run dist
+MCTEMA_SIGNING_KEY=/path/to/release-key.pem node scripts/sign-release.js build/MCTemaLauncher-Setup-<version>.exe
+# upload the installer, its .blockmap, latest.yml and manifest-<version>.json
+```
+
+The private key never belongs on the server or in this repository.
+
 ## License
 
 Code is licensed under [GPL-3.0](LICENSE). MC Tema branding, logos and artwork are **not** covered by the code license and may not be reused.

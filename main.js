@@ -405,6 +405,15 @@ function initUpdater() {
     autoUpdater,
     enabled: app.isPackaged,
     send: (data) => { if (win && !win.isDestroyed()) win.webContents.send('app:update', data); },
+    // The manifest comes over the certificate-pinned client, so the proof of
+    // authenticity does not travel on the same connection as the installer it
+    // describes. Even if both were rewritten, the signature would not verify.
+    fetchSigned: async (version) => {
+      const r = await pinnedApi('GET', `/updates/manifest-${encodeURIComponent(version)}.json`, null, null);
+      if (r.error || r.status !== 200 || !r.json) return null;
+      const { body, signature } = r.json;
+      return typeof body === 'string' && typeof signature === 'string' ? { body, signature } : null;
+    },
   });
 }
 
