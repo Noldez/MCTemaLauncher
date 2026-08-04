@@ -102,18 +102,6 @@ The launcher is open source so this section can be checked rather than believed.
 
 <img src=".github/trust-boundaries.svg" alt="Trust boundaries: the password stops at the launcher, only a single-use ticket reaches the game" width="100%">
 
-### What we assume an attacker can do
-
-Everything below is written against this list, not against a vague wish to be secure.
-
-- Sit between you and `mctema.lt` - public wifi, a hostile ISP, or a proxy with its own CA installed on your machine.
-- Serve you a modified installer, or take over the update feed itself.
-- Read anything inside the Minecraft process. Mods share one JVM and you can install your own, so treat that whole environment as public.
-- Run a modified launcher, or skip it and talk to the API with curl. The client is not trusted with anything.
-- Read this source. Nothing here depends on you not knowing how it works.
-
-### Controls
-
 | Layer | Holds against | How |
 |---|---|---|
 | **Transport** | Interception, rogue or compelled CA | Every call to `mctema.lt` is refused unless the chain contains a key pinned in [`lib/pinned-http.js`](lib/pinned-http.js). A second CA is pinned as backup so a certificate change cannot lock everyone out, and CAA records stop any other CA issuing for the domain at all. |
@@ -126,7 +114,7 @@ Everything below is written against this list, not against a vague wish to be se
 
 ### Not covered
 
-Worth being straight about, since a threat model that claims everything is worth nothing.
+Worth being straight about, since a list that claims everything is worth nothing.
 
 - **Anyone with administrator access to your machine.** They can read the keystore, patch the launcher, or just install a keylogger. No client-side control survives that.
 - **Code signing.** The installer is unsigned ([#5](https://github.com/Noldez/MCTemaLauncher/issues/5)), so SmartScreen has no reputation to go on and you verify by checksum instead. This is the gap we would close first.
