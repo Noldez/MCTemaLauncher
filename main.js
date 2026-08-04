@@ -19,6 +19,7 @@ const { initUpdater: startUpdater } = require('./lib/updater');
 const { createToastStack } = require('./lib/toasts');
 const { mapPosts, absolutizeImage } = require('./lib/news');
 const { createLogBuffer, suspectCause } = require('./lib/crash');
+const { parseDeepLink, linkFromArgv } = require('./lib/deeplink');
 const { autoUpdater } = require('electron-updater');
 
 // Software WebGL fallback for GPU-less machines (VMs, blocklisted drivers);
@@ -315,6 +316,33 @@ const initRpc = () => presence.init();
 
 let win = null;
 
+// mctema:// links: a cold start carries the link in argv; a warm one arrives
+// via second-instance. Held here until the renderer asks, because the window
+// exists long before its listeners do.
+let pendingDeepLink = linkFromArgv(process.argv);
+
+function handleDeepLink(raw) {
+  const link = parseDeepLink(raw);
+  if (!link) return;
+  if (win && !win.isDestroyed()) win.webContents.send('deeplink', link);
+  else pendingDeepLink = raw;
+}
+
+// One instance: protocol launches must land in the running launcher instead of
+// a second copy fighting the first over the game directory.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', (_e, argv) => {
+    if (win && !win.isDestroyed()) {
+      if (win.isMinimized()) win.restore();
+      win.show();
+      win.focus();
+    }
+    handleDeepLink(linkFromArgv(argv));
+  });
+}
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1280,
@@ -348,6 +376,8 @@ function initUpdater() {
 
 app.whenReady().then(() => {
   if (process.platform === 'win32') app.setAppUserModelId('lt.mctema.launcher');
+  // Packaged only: a dev registration would point the scheme at electron.exe.
+  if (app.isPackaged) app.setAsDefaultProtocolClient('mctema');
   ensureDir();
   createWindow();
   if (loadConfig().discordRpc !== false) initRpc();
@@ -388,6 +418,13 @@ ipcMain.on('open-external', (_e, url) => {
 });
 
 ipcMain.handle('app:version', () => app.getVersion());
+
+// The renderer pulls the cold-start deep link once its listeners exist.
+ipcMain.handle('deeplink:pending', () => {
+  const link = parseDeepLink(pendingDeepLink);
+  pendingDeepLink = null;
+  return link;
+});
 
 // Crash reporting: the dialog's Siusti loga ships the console tail so support
 // tickets arrive with the evidence attached. Best effort - the report id comes

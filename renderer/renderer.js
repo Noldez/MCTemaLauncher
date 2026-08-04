@@ -201,6 +201,29 @@ $('rail-notif').addEventListener('click', (e) => {
 document.addEventListener('click', (e) => {
   if (!notifPop.contains(e.target) && !$('rail-notif').contains(e.target)) notifPop.classList.add('hidden');
 });
+// mctema:// deep links, already validated in the main process: play presses
+// LAUNCH, friend prefills the add-friend box, open just needed the focus the
+// main process already gave the window.
+function runDeepLink(l) {
+  if (!l) return;
+  if (l.action === 'play') {
+    const play = $('btn-play');
+    if (play && !play.disabled) play.click();
+  } else if (l.action === 'friend') {
+    window.ui.showView('home');
+    const inp = $('fr-input');
+    if (inp) {
+      inp.value = l.nick;
+      inp.focus();
+    }
+    document.dispatchEvent(new CustomEvent('notify', {
+      detail: { text: `Spausk + kad išsiųstum draugystės prašymą ${l.nick}.`, kind: 'info' },
+    }));
+  }
+}
+window.api.onDeepLink(runDeepLink);
+window.api.deepLinkPending().then(runDeepLink).catch(() => {});
+
 window.api.onLaunched(() => { window.ui.state.gameRunning = true; });
 window.api.onClosed(() => { window.ui.state.gameRunning = false; });
 window.api.onUpdate((u) => {

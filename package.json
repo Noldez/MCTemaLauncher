@@ -45,6 +45,14 @@
       "lib/**/*"
     ],
     "copyright": "MC Tema - Sukūrė ただし (Discord: noldez)",
+    "protocols": [
+      {
+        "name": "MC Tema Launcher",
+        "schemes": [
+          "mctema"
+        ]
+      }
+    ],
     "win": {
       "target": "nsis",
       "icon": "assets/icon.ico",
