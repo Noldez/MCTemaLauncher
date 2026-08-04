@@ -249,7 +249,8 @@ body { background: var(--bg); color: var(--ink); font-family: 'Poppins', sans-se
   color: var(--muted); cursor: pointer; }
 .gal-tabs .gt.on { color: var(--ink); }
 .news-card { position: relative; height: 215px; border-radius: 14px; overflow: hidden; cursor: default;
-  background-size: cover; background-repeat: no-repeat; transition: transform .18s, box-shadow .18s; }
+  background-size: cover; background-repeat: no-repeat; transition: transform .18s, box-shadow .18s;
+  background-color: #12151b; background-position: center 35%; }
 .news-card:hover { transform: translateY(-3px); box-shadow: 0 18px 40px -16px rgba(0,0,0,.8); }
 .news-card::before { content: ""; position: absolute; inset: 0;
   background: linear-gradient(180deg, rgba(10,10,12,0) 25%, rgba(10,10,12,.55) 60%, rgba(10,10,12,.92) 100%); }

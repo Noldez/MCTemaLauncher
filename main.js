@@ -17,6 +17,7 @@ const { stageMods, resolveJava: resolveBundledJava } = require('./lib/mods');
 const { createRichPresence } = require('./lib/rpc');
 const { initUpdater: startUpdater } = require('./lib/updater');
 const { createToastStack } = require('./lib/toasts');
+const { mapPosts } = require('./lib/news');
 const { autoUpdater } = require('electron-updater');
 
 // Software WebGL fallback for GPU-less machines (VMs, blocklisted drivers);
@@ -477,6 +478,12 @@ ipcMain.handle('discord:status', async () => {
     }
   }
   return discordCache.data;
+});
+
+ipcMain.handle('news:list', async () => {
+  const r = await pinnedApi('GET', '/api/posts', null, null);
+  if (r.error || r.status !== 200 || !Array.isArray(r.json)) return { ok: false };
+  return { ok: true, posts: mapPosts(r.json) };
 });
 
 const SITE_API = 'https://mctema.lt/api';

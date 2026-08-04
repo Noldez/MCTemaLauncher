@@ -192,4 +192,29 @@
   }
   tickNews();
   setInterval(tickNews, 30000);
+
+  // Real news from mctema.lt. On any failure the bundled static cards stay -
+  // the launcher must look fine fully offline.
+  (async () => {
+    let r;
+    try { r = await window.api.newsList(); } catch { return; }
+    if (!r || !r.ok || !r.posts || !r.posts.length) return;
+    const { el } = window.ui;
+    const grid = document.querySelector('.news-grid');
+    grid.textContent = '';
+    r.posts.forEach((p) => {
+      const card = el('article', 'news-card');
+      if (p.imageUrl) card.style.backgroundImage = `url("${p.imageUrl}")`;
+      const box = el('div', 'nc-content');
+      const when = p.dateIso
+        ? new Date(p.dateIso).toLocaleDateString('lt-LT', { year: 'numeric', month: 'long', day: 'numeric' })
+        : '';
+      box.append(el('div', 'nc-title', p.title), el('div', 'nc-under', when));
+      const more = el('button', 'nc-more', 'PLAČIAU');
+      more.addEventListener('click', () => window.ui.openUrl(p.url));
+      box.append(more);
+      card.append(box);
+      grid.append(card);
+    });
+  })();
 })();
