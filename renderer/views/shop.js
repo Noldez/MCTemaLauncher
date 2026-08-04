@@ -7,6 +7,11 @@
   let pending = null;
   let inFlight = false;
   let allServices = [];
+  // Which account's data is currently loaded (null/undefined usernames all collapse to
+  // null, so a logged-out state doesn't look like a "different account" than another
+  // logged-out state). Only a successful load() advances this - a failed load leaves it
+  // as-is so the next cfg event or manual rail click retries.
+  let loadedFor = null;
 
   function setBalance(n) {
     balance = n;
@@ -57,6 +62,7 @@
       list.append(retry);
       return;
     }
+    loadedFor = (window.ui.state.cfg && window.ui.state.cfg.username) || null;
     setBalance(r.auksiniai);
     allServices = (r.categories || []).flatMap((c) => c.services || []);
     renderCatalog(r.categories);
@@ -150,16 +156,22 @@
   document.querySelectorAll('#view-shop [data-url]').forEach((b) =>
     b.addEventListener('click', () => window.ui.openUrl(b.dataset.url)));
 
+  // Manual refresh path: always reloads, regardless of whether the account already
+  // matches loadedFor. If nobody is logged in this fails into the retry-button state,
+  // which is fine - it's an explicit click, not something firing on every keystroke.
   document.querySelector('.rail-btn[data-view="shop"]').addEventListener('click', load);
-  // Fill the hero balance callout without opening the view; also reload on every cfg event
-  // (fired on startup config load and after login), not just the first one - cfg also fires
-  // on logging in as a different account, and gating on haveData left the previous account's
-  // balance/catalog on screen until the shop button was clicked. The GET is cheap.
-  document.addEventListener('cfg', () => {
+  // cfg fires on startup config load, after login, and on every settings mutation (RAM
+  // slider, toggles, JVM args, friend prefs) - reload only when it signals a different
+  // account than what's currently loaded, not on every firing (that would needlessly
+  // re-GET and blank the balance on unrelated settings changes, and double-fetch at
+  // startup alongside this same cfg dispatch). loadedFor and the event's username both
+  // collapse null/undefined to null so two logged-out firings compare equal.
+  document.addEventListener('cfg', (e) => {
+    const username = (e.detail && e.detail.username) || null;
+    if (username === loadedFor) return;
     $('shop-auks').textContent = '-';
     const hero = $('co-auks');
     if (hero) hero.textContent = '-';
     load();
   });
-  load();
 })();
