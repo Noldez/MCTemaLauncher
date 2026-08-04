@@ -33,6 +33,7 @@ contextBridge.exposeInMainWorld('api', {
   addModrinthMod: (p) => ipcRenderer.invoke('omods:addModrinth', p),
   addLocalMod: (p) => ipcRenderer.invoke('omods:addLocal', p),
   discordStatus: () => ipcRenderer.invoke('discord:status'),
+  newsList: () => ipcRenderer.invoke('news:list'),
   submitShot: (p) => ipcRenderer.invoke('gallery:submit', p),
   featuredGallery: () => ipcRenderer.invoke('gallery:featured'),
   voteShot: (p) => ipcRenderer.invoke('gallery:vote', p),
