@@ -6,6 +6,8 @@
   let balance = 0;
   let haveData = false;
   let pending = null;
+  let inFlight = false;
+  let allServices = [];
 
   function setBalance(n) {
     balance = n;
@@ -58,6 +60,7 @@
     }
     haveData = true;
     setBalance(r.auksiniai);
+    allServices = (r.categories || []).flatMap((c) => c.services || []);
     renderCatalog(r.categories);
   }
 
@@ -72,6 +75,9 @@
   }
 
   function closeConfirm() {
+    // A purchase is in flight for the currently pending item - ignore cancel/overlay
+    // dismissal until it settles, so its resolution can't stomp a different modal state.
+    if (inFlight) return;
     pending = null;
     $('shop-modal').classList.add('hidden');
   }
@@ -82,26 +88,60 @@
   });
 
   $('sm-buy').addEventListener('click', async () => {
-    if (!pending) return;
+    if (!pending || inFlight) return;
     const s = pending;
+    inFlight = true;
     $('sm-buy').disabled = true;
-    const r = await window.api.shopPurchase({ serviceId: s.id, expectedPriceCents: price(s) });
+    $('sm-cancel').disabled = true;
+
+    let r;
+    try {
+      r = await window.api.shopPurchase({ serviceId: s.id, expectedPriceCents: price(s) });
+    } catch {
+      r = null;
+    }
+
+    // Cancel/overlay clicks are ignored while inFlight, so pending cannot have moved on -
+    // but only ever touch the modal for the request that's actually still pending.
+    if (pending !== s) { inFlight = false; $('sm-cancel').disabled = false; return; }
+
     if (r && r.ok) {
       setBalance(r.auksiniai);
+      inFlight = false;
       closeConfirm();
       document.dispatchEvent(new CustomEvent('notify', {
         detail: { text: `Nupirkta: ${s.name}. Pristatoma žaidime.`, kind: 'info' },
       }));
       return;
     }
-    $('sm-buy').disabled = false;
+
     const err = $('sm-err');
+
+    if (r && r.code === 'PRICE') {
+      // The server refused a stale price: refresh the catalog, then ask the player to
+      // confirm the new price rather than silently resubmitting the old one.
+      await load();
+      if (pending !== s) { inFlight = false; $('sm-cancel').disabled = false; return; }
+      const fresh = allServices.find((x) => x.id === s.id);
+      inFlight = false;
+      $('sm-cancel').disabled = false;
+      if (fresh) {
+        openConfirm(fresh);
+        err.textContent = 'Kaina pasikeitė - patvirtink naują kainą.';
+        err.classList.remove('hidden');
+      } else {
+        closeConfirm();
+      }
+      return;
+    }
+
+    inFlight = false;
+    $('sm-cancel').disabled = false;
+    $('sm-buy').disabled = false;
     err.textContent = (r && r.code === 'BALANCE')
       ? 'Nepakanka auksinių - papildyk balansą svetainėje.'
       : (r && r.error) || 'Kažkas nepavyko.';
     err.classList.remove('hidden');
-    // The server refused a stale price; show the current catalog immediately.
-    if (r && r.code === 'PRICE') load();
   });
 
   $('shop-topup').addEventListener('click', () => window.ui.openUrl('https://mctema.lt/parduotuve'));
