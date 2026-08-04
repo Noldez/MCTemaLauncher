@@ -157,6 +157,25 @@ flowchart TD
 <details>
 <summary><b>Logging in, and why the password never reaches the game</b></summary>
 
+```mermaid
+sequenceDiagram
+    autonumber
+    actor P as Player
+    participant L as Launcher
+    participant S as mctema.lt
+    participant G as Minecraft JVM
+
+    P->>L: password, once
+    L->>S: verify over pinned TLS
+    S-->>L: session token + refresh token
+    Note over L: password encrypted<br/>in the OS keystore
+    L->>S: request login ticket
+    S-->>L: single use, short lived
+    L->>G: ticket only
+    G->>S: redeem while joining
+    Note over G: ticket now worthless<br/>password was never here
+```
+
 Your password goes to `mctema.lt/api/launcher/login` over a pinned connection and is checked against the server's AuthMe database - the same account you use in game. The server returns a session token plus a refresh token, and staying signed in afterwards uses the refresh token, so **the password is not sent again**.
 
 The launcher does *not* hand Minecraft your password. Anything loaded into that JVM can read its environment, including mods you installed yourself, so the password would be the one credential a hostile mod could simply pick up. Instead the launcher requests a one-shot login ticket - one nickname, one use, five minutes - and passes only that. The client mod sends it through the encrypted handshake and the server redeems it, after which it is worthless. If a ticket cannot be issued the game still starts and you type `/login` once.
@@ -174,6 +193,20 @@ Before every launch the bundled client mods are hashed against known values and 
 
 <details>
 <summary><b>Updating</b></summary>
+
+```mermaid
+flowchart LR
+    A["New version<br/>advertised"] --> B["Installer downloaded<br/>ordinary TLS"]
+    B --> C["Release manifest fetched<br/>pinned TLS"]
+    C --> D{"Signed by our<br/>offline key?<br/>Version and hash<br/>both match?"}
+    D -->|yes| E["Install"]
+    D -->|no| F["Delete<br/>and report"]
+
+    style E fill:#1f3b25,stroke:#3a6
+    style F fill:#3b1f1f,stroke:#a33
+```
+
+Two independent paths have to agree: rewriting the download is not enough without the key, and the key is not on the server.
 
 `electron-updater` checks `mctema.lt/updates/` every 15 minutes. That download deliberately uses ordinary TLS rather than our pins, so a mistake in the pin list stays recoverable by shipping a fix. Because it does, the trust comes from elsewhere: the launcher fetches a release manifest signed with an offline key over the **pinned** connection, hashes the installer it just downloaded, and installs only if the signature covers exactly that version and hash. Anything else is deleted.
 
