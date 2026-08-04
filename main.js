@@ -13,12 +13,12 @@ const {
 const configStore = require('./lib/config');
 const { createCredentialStore, authErrText } = require('./lib/credentials');
 const { mcStatus } = require('./lib/mc-status');
-const { stageMods, resolveJava: resolveBundledJava } = require('./lib/mods');
+const { stageMods, resolveJava: resolveBundledJava, isPlainFileName } = require('./lib/mods');
 const { createRichPresence } = require('./lib/rpc');
 const { initUpdater: startUpdater } = require('./lib/updater');
 const { createToastStack } = require('./lib/toasts');
 const { mapPosts, absolutizeImage } = require('./lib/news');
-const { createLogBuffer, suspectCause } = require('./lib/crash');
+const { createLogBuffer, suspectCause, redactLog } = require('./lib/crash');
 const { parseDeepLink, linkFromArgv } = require('./lib/deeplink');
 const { autoUpdater } = require('electron-updater');
 
@@ -359,11 +359,45 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      // Explicit rather than inherited: these are the settings that keep a
+      // renderer bug from becoming code execution on the player's machine.
+      sandbox: true,
+      webviewTag: false,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
     },
   });
 
+  hardenContents(win.webContents);
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   win.once('ready-to-show', () => win.show());
+}
+
+/**
+ * Lock a window to its bundled UI.
+ *
+ * The renderer holds an IPC bridge that can spend a balance and read local
+ * files, so remote content must never be able to run in it. The CSP stops
+ * remote *subresources* but not navigation of the window itself, and a stray
+ * link, a form post or a window.open would otherwise replace our page with a
+ * remote one that inherits the same preload. Both are refused outright, and
+ * anything meant for a browser is handed to the OS instead.
+ */
+function hardenContents(contents) {
+  contents.on('will-navigate', (e, url) => {
+    if (url !== contents.getURL()) {
+      e.preventDefault();
+      if (/^https:\/\//.test(url)) shell.openExternal(url);
+    }
+  });
+  contents.setWindowOpenHandler(({ url }) => {
+    if (/^https:\/\//.test(url)) shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  contents.on('will-attach-webview', (e) => e.preventDefault());
+  // Nothing in the launcher needs the camera, microphone, location or
+  // notifications; the local page should never even be asked.
+  contents.session.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));
 }
 
 function initUpdater() {
@@ -430,8 +464,10 @@ ipcMain.handle('deeplink:pending', () => {
 // tickets arrive with the evidence attached. Best effort - the report id comes
 // back for the player to quote.
 ipcMain.handle('crash:send', async () => {
-  const logText = crashBuf.text();
-  if (!logText) return { ok: false, error: 'Logas tuščias.' };
+  const raw = crashBuf.text();
+  if (!raw) return { ok: false, error: 'Logas tuščias.' };
+  // Uploads go to our staff, so the account name and home path come out first.
+  const logText = redactLog(raw, app.getPath('home'), require('os').userInfo().username);
   return friendsApi('POST', '/api/launcher/crash-report', {
     log: logText.slice(-256 * 1024),
     exitCode: lastExitCode,
@@ -680,9 +716,11 @@ async function downloadVerifiedMod(file) {
     const u = new URL(file.url);
     if (u.protocol !== 'https:' || u.hostname !== 'cdn.modrinth.com') return null;
 
-    const algo = file.hashes && file.hashes.sha512 ? 'sha512' : file.hashes && file.hashes.sha1 ? 'sha1' : null;
-    if (!algo) return null;
-    const expected = String(file.hashes[algo]).toLowerCase();
+    // sha512 only: Modrinth publishes it for every file, and sha1 is too weak
+    // to be the sole gate on something that runs as code in the game.
+    const expected = String((file.hashes && file.hashes.sha512) || '').toLowerCase();
+    if (!/^[a-f0-9]{128}$/.test(expected)) return null;
+    const algo = 'sha512';
 
     const r = await fetch(u.href, { redirect: 'error', signal: AbortSignal.timeout(60000) });
     if (!r.ok) return null;
@@ -850,7 +888,7 @@ ipcMain.handle('omods:toggle', async (_e, payload) => {
   if (enabled && st) {
     const info = (await omodFetchInfo())[id];
     if (info && info.version !== st.version) {
-      try { fs.rmSync(path.join(optionalDir, st.file), { force: true }); } catch {}
+      if (isPlainFileName(st.file)) { try { fs.rmSync(path.join(optionalDir, st.file), { force: true }); } catch {} }
       saveConfig({ ...cfg, optionalMods: (cfg.optionalMods || []).filter((x) => x.id !== id) });
       st = null;
     }
@@ -887,7 +925,7 @@ ipcMain.handle('omods:remove', (_e, id) => {
   const cfg = loadConfig();
   const st = (cfg.optionalMods || []).find((x) => x.id === String(id));
   if (st) {
-    try { fs.rmSync(path.join(optionalDir, st.file), { force: true }); } catch {}
+    if (isPlainFileName(st.file)) { try { fs.rmSync(path.join(optionalDir, st.file), { force: true }); } catch {} }
     saveConfig({ ...cfg, optionalMods: (cfg.optionalMods || []).filter((x) => x.id !== String(id)) });
   }
   return { ok: true };
