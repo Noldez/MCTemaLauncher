@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 236" width="920" height="236" role="img" aria-label="Update gate: the installer and the signature travel on different paths, and both must agree before anything installs">
+  <defs>
+    <linearGradient id="card3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#101318"/>
+      <stop offset="1" stop-color="#0b0d10"/>
+    </linearGradient>
+    <radialGradient id="okGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#4ade80" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#4ade80" stop-opacity="0"/>
+    </radialGradient>
+    <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#5c6672"/>
+    </marker>
+    <marker id="ar3g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#4ade80"/>
+    </marker>
+    <marker id="ar3r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#ef4444"/>
+    </marker>
+  </defs>
+
+  <style>
+    .t3   { font-family: "Segoe UI", system-ui, -apple-system, sans-serif; }
+    .h3   { font-size: 10px; font-weight: 700; letter-spacing: 2px; fill: #5c6672; }
+    .n3   { font-size: 12.5px; font-weight: 600; fill: #f2f2f4; }
+    .s3   { font-size: 10.5px; fill: #8b8b93; }
+    .g3   { font-size: 10.5px; fill: #4ade80; font-weight: 600; }
+    .r3   { font-size: 10.5px; fill: #ef4444; font-weight: 600; }
+  </style>
+
+  <rect width="920" height="236" rx="16" fill="url(#card3)"/>
+  <text class="t3 h3" x="36" y="32">BEFORE AN UPDATE IS ALLOWED TO INSTALL</text>
+
+  <!-- two independent paths -->
+  <rect x="36" y="52" width="230" height="56" rx="11" fill="#151a21" stroke="#2a3340"/>
+  <text class="t3 n3" x="52" y="76">Installer downloaded</text>
+  <text class="t3 s3" x="52" y="94">ordinary TLS, from the feed</text>
+
+  <rect x="36" y="128" width="230" height="56" rx="11" fill="#12181a" stroke="#4ade80" stroke-opacity=".45"/>
+  <text class="t3 n3" x="52" y="152">Manifest fetched</text>
+  <text class="t3 g3" x="52" y="170">pinned TLS, separate path</text>
+
+  <!-- gate -->
+  <ellipse cx="470" cy="118" rx="118" ry="72" fill="url(#okGlow)"/>
+  <rect x="330" y="72" width="280" height="92" rx="12" fill="#12181a" stroke="#4ade80" stroke-opacity=".55"/>
+  <text class="t3 n3" x="352" y="100">Does the signature match?</text>
+  <text class="t3 s3" x="352" y="122">signed with a key that is not on</text>
+  <text class="t3 s3" x="352" y="138">the server, and covers this exact</text>
+  <text class="t3 s3" x="352" y="154">version and file hash</text>
+
+  <!-- outcomes -->
+  <rect x="676" y="52" width="208" height="56" rx="11" fill="#12181a" stroke="#4ade80" stroke-opacity=".55"/>
+  <text class="t3 n3" x="694" y="76">Install</text>
+  <text class="t3 s3" x="694" y="94">on next launch</text>
+
+  <rect x="676" y="128" width="208" height="56" rx="11" fill="#1a1214" stroke="#ef4444" stroke-opacity=".5"/>
+  <text class="t3 n3" x="694" y="152">Delete it</text>
+  <text class="t3 s3" x="694" y="170">and say so, stay on this version</text>
+
+  <!-- edges -->
+  <path d="M266 80 L300 80 L300 108 L322 108" fill="none" stroke="#5c6672" stroke-width="1.4" marker-end="url(#ar3)"/>
+  <path d="M266 156 L300 156 L300 130 L322 130" fill="none" stroke="#4ade80" stroke-opacity=".6" stroke-width="1.5" marker-end="url(#ar3g)"/>
+
+  <path d="M610 104 L644 104 L644 80 L668 80" fill="none" stroke="#4ade80" stroke-opacity=".7" stroke-width="1.6" marker-end="url(#ar3g)"/>
+  <text class="t3 g3" x="616" y="72">both agree</text>
+
+  <path d="M610 134 L644 134 L644 156 L668 156" fill="none" stroke="#ef4444" stroke-opacity=".6" stroke-width="1.5" marker-end="url(#ar3r)"/>
+  <text class="t3 r3" x="616" y="184">anything else</text>
+
+  <text class="t3 s3" x="460" y="218" text-anchor="middle" font-size="11.5">Taking over the update feed rewrites the download. It does not produce the signature.</text>
+</svg>
