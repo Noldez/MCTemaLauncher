@@ -48,6 +48,7 @@ const browserGlobals = {
   cancelAnimationFrame: "readonly",
   fetch: "readonly",
   Image: "readonly",
+  ImageDecoder: "readonly",
   Blob: "readonly",
   File: "readonly",
   FileReader: "readonly",

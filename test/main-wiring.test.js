@@ -65,3 +65,53 @@ test('main.js only calls members its namespaced lib modules export', () => {
     }
   }
 });
+
+// The preload runs with sandbox: true, where `require` resolves only electron
+// and a handful of built-ins. Requiring anything from lib/ throws before
+// contextBridge runs, so window.api never appears and the whole UI is dead -
+// no version, no login, no error anyone can see. This shipped once.
+const PRELOAD = fs.readFileSync(path.join(__dirname, '..', 'preload.js'), 'utf8');
+
+test('preload.js requires nothing a sandboxed preload cannot resolve', () => {
+  const allowed = new Set(['electron']);
+  const found = [...PRELOAD.matchAll(/require\(\s*['"]([^'"]+)['"]\s*\)/g)].map((m) => m[1]);
+  assert.ok(found.length > 0, 'expected preload.js to require electron');
+  for (const mod of found) {
+    assert.ok(
+      allowed.has(mod),
+      `preload.js requires "${mod}"; a sandboxed preload can only resolve ${[...allowed].join(', ')}. `
+        + 'Move the work to main.js and reach it over IPC.',
+    );
+  }
+});
+
+test('every api method the preload exposes is a function', () => {
+  // A bare value here means a typo turned a call into a property read.
+  const body = PRELOAD.slice(PRELOAD.indexOf('exposeInMainWorld'));
+  const bad = [...body.matchAll(/^\s{2}(\w+):\s*([^(\s].*)$/gm)]
+    .filter((m) => !m[2].startsWith('('))
+    .map((m) => m[1]);
+  assert.deepEqual(bad, [], `these api entries are not functions: ${bad.join(', ')}`);
+});
+
+// config:set is the one channel that writes the config file, and the config
+// also holds things main owns - the skin and cape libraries, installed
+// optional mods, the signed-in nick - some of which become file paths later.
+// It must be an allowlist, or a scripting bug in the UI turns into a way to
+// point those paths anywhere.
+test('config:set writes only the settings the UI owns', () => {
+  const block = MAIN.slice(MAIN.indexOf('const CONFIG_SETTERS'), MAIN.indexOf("ipcMain.handle('config:openFolder'"));
+  assert.ok(block.includes('const CONFIG_SETTERS'), 'expected a CONFIG_SETTERS allowlist');
+
+  const allowed = [...block.matchAll(/^ {2}(\w+):/gm)].map((m) => m[1]);
+  assert.deepEqual(
+    allowed.sort(),
+    ['closeOnPlay', 'discordRpc', 'friendPrefs', 'jvmArgs', 'ram', 'resolution', 'toasts'],
+    'the set of writable settings changed - is the new one safe for the renderer to control?',
+  );
+  for (const owned of ['skins', 'capes', 'currentSkin', 'currentCape', 'optionalMods', 'username', 'friends']) {
+    assert.ok(!allowed.includes(owned), `${owned} is main's to write, not the renderer's`);
+  }
+  // A spread of the incoming patch would put every key back regardless.
+  assert.ok(!/\.\.\.\(patch \|\| \{\}\)/.test(block), 'config:set must not spread the raw patch');
+});

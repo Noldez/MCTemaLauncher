@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, clipboard, nativeImage, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, shell, clipboard, nativeImage, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -87,6 +87,70 @@ ipcMain.handle('auth:login', async (_e, payload) => {
   }
   return { ok: false, error: authErrText(r) };
 });
+
+const REGISTER_ERR = {
+  BAD_INPUT: 'Slapyvardis: 3-16 simbolių (raidės, skaičiai, _).',
+  BAD_NICK: 'Slapyvardis: 3-16 simbolių (raidės, skaičiai, _).',
+  BAD_PASSWORD: 'Slaptažodis per silpnas - bent 6 simboliai ir ne toks pat kaip slapyvardis.',
+  RESERVED: 'Šis slapyvardis rezervuotas.',
+  TAKEN: 'Toks slapyvardis jau užimtas.',
+  TOO_MANY: 'Iš šio interneto ryšio jau sukurta paskyrų riba.',
+  COOLDOWN: 'Neseniai jau kūrei paskyrą - pabandyk po valandos.',
+  RATE: 'Per daug bandymų - palauk minutę.',
+  CLOSED: 'Registracija laikinai neveikia.',
+};
+
+/**
+ * Create an account, then log straight into it.
+ *
+ * Registering and signing in are one step for the player, and the login call
+ * is what stores the tokens - so this stays a thin wrapper around the two
+ * requests rather than a second place that knows how sessions are kept.
+ */
+ipcMain.handle('auth:register', async (_e, payload) => {
+  const username = String((payload && payload.username) || '').trim();
+  const password = String((payload && payload.password) || '');
+  if (!/^[A-Za-z0-9_]{3,16}$/.test(username)) {
+    return { ok: false, error: REGISTER_ERR.BAD_NICK };
+  }
+  if (password.length < 6) return { ok: false, error: REGISTER_ERR.BAD_PASSWORD };
+  if (!keystoreUsable()) {
+    return {
+      ok: false,
+      error: process.platform === 'linux'
+        ? 'Nerasta saugi raktinė (gnome-keyring arba kwallet).'
+        : 'OS saugykla nepasiekiama.',
+    };
+  }
+
+  const r = await pinnedPostJson('/api/launcher/register', { username, password });
+  if (r.error) {
+    return { ok: false, error: r.error === 'PIN' ? 'Saugumo klaida: nepatikimas sertifikatas.' : 'Nepavyko pasiekti mctema.lt.' };
+  }
+  if (!(r.status === 200 && r.json && r.json.ok)) {
+    const code = r.json && r.json.error;
+    return { ok: false, error: REGISTER_ERR[code] || 'Nepavyko sukurti paskyros.' };
+  }
+  return loginAfterRegister(username, password);
+});
+
+/** Sign in with credentials we just created, reusing the normal login path. */
+async function loginAfterRegister(username, password) {
+  const r = await pinnedPostJson('/api/launcher/login', { username, password });
+  if (r.status === 200 && r.json && r.json.ok) {
+    const name = r.json.username || username;
+    saveAuth({
+      username: name,
+      password,
+      token: r.json.token || null,
+      refreshToken: r.json.refreshToken || null,
+    });
+    saveConfig({ ...loadConfig(), username: name });
+    return { ok: true, username: name };
+  }
+  // The account exists either way; the player can just sign in.
+  return { ok: false, error: 'Paskyra sukurta - prisijunk su ja.' };
+}
 
 ipcMain.handle('auth:logout', async () => {
   // Retire the token server-side too, so it cannot outlive the logout.
@@ -240,12 +304,112 @@ ipcMain.handle('chat:history', (_e, p) => {
   const after = Number((p && p.after) || 0);
   return friendsApi('GET', `/api/launcher/messages?with=${withNick}&after=${after}`);
 });
+ipcMain.handle('chat:edit', (_e, p) => friendsApi('POST', `/api/launcher/messages/${Number(p && p.id)}/edit`, {
+  body: String((p && p.body) || '').slice(0, 1000),
+}));
+ipcMain.handle('chat:delete', (_e, id) =>
+  friendsApi('POST', `/api/launcher/messages/${Number(id)}/delete`));
+ipcMain.handle('chat:typing', (_e, p) => friendsApi('POST', '/api/launcher/typing',
+  p && p.groupId ? { groupId: Number(p.groupId) } : { to: String((p && p.to) || '') }));
+
 ipcMain.handle('chat:send', (_e, p) => friendsApi('POST', '/api/launcher/messages', {
   to: String((p && p.to) || ''), body: String((p && p.body) || '').slice(0, 1000),
+  replyTo: p && p.replyTo ? Number(p.replyTo) : null,
+}));
+
+// Group chats. The inbox call already carries groups and pins, so there is
+// nothing extra to fetch for the list itself.
+ipcMain.handle('groups:create', (_e, p) => friendsApi('POST', '/api/launcher/groups', {
+  name: String((p && p.name) || '').slice(0, 40),
+  members: Array.isArray(p && p.members) ? p.members.slice(0, 19).map(String) : [],
+}));
+ipcMain.handle('groups:addMember', (_e, p) =>
+  friendsApi('POST', `/api/launcher/groups/${Number(p && p.id)}/members`, { nick: String((p && p.nick) || '') }));
+// Send a screenshot straight from the gallery. The file is read here and the
+// path is checked against the screenshots folder, so the renderer never gets
+// to name an arbitrary file or hold its bytes.
+ipcMain.handle('chat:sendShot', async (_e, p) => {
+  const file = String((p && p.path) || '');
+  if (!inShots(file)) return { ok: false, error: 'Netinkamas failas.' };
+  let buf;
+  try { buf = fs.readFileSync(file); } catch { buf = null; }
+  if (!buf || !buf.length || buf.length > 8 * 1024 * 1024) return { ok: false, error: 'Netinkamas failas.' };
+  const name = path.basename(file).slice(0, 64);
+  const type = /\.png$/i.test(name) ? 'image/png' : /\.webp$/i.test(name) ? 'image/webp' : 'image/jpeg';
+  const groupId = Number((p && p.groupId) || 0);
+  const to = String((p && p.to) || '');
+  const fields = groupId ? { groupId: String(groupId) } : { to };
+
+  let a = loadAuth();
+  if (!a) return { ok: false, error: 'Prisijunk iš naujo.' };
+  if (!a.token) {
+    a = await refreshLauncherToken(a);
+    if (!a) return { ok: false, error: 'Prisijunk iš naujo.' };
+  }
+  let r = await pinnedUpload('/api/launcher/messages/image', a.token, fields, { name, type, buf });
+  if (r.status === 401) {
+    const fresh = await refreshLauncherToken(a);
+    if (!fresh) return { ok: false, error: 'Prisijunk iš naujo.' };
+    r = await pinnedUpload('/api/launcher/messages/image', fresh.token, fields, { name, type, buf });
+  }
+  if (r.error) return { ok: false, error: 'Nepavyko pasiekti mctema.lt.' };
+  if (r.json && r.json.ok) return r.json;
+  return { ok: false, error: FRIEND_ERR[r.json && r.json.error] || 'Nepavyko išsiųsti.' };
+});
+
+ipcMain.handle('groups:rename', (_e, p) =>
+  friendsApi('POST', `/api/launcher/groups/${Number(p && p.id)}/name`, {
+    name: String((p && p.name) || '').slice(0, 40),
+  }));
+
+ipcMain.handle('groups:icon', async (_e, p) => {
+  const id = Number(p && p.id);
+  const name = String((p && p.name) || 'ikona.png').slice(0, 64);
+  let buf;
+  try { buf = Buffer.from(String((p && p.data) || ''), 'base64'); } catch { buf = null; }
+  if (!id || !buf || !buf.length || buf.length > 8 * 1024 * 1024) return { ok: false, error: 'Netinkamas failas.' };
+  const type = /\.png$/i.test(name) ? 'image/png' : /\.webp$/i.test(name) ? 'image/webp' : 'image/jpeg';
+  let a = loadAuth();
+  if (!a) return { ok: false, error: 'Prisijunk iš naujo.' };
+  if (!a.token) {
+    a = await refreshLauncherToken(a);
+    if (!a) return { ok: false, error: 'Prisijunk iš naujo.' };
+  }
+  const path_ = `/api/launcher/groups/${id}/icon`;
+  let r = await pinnedUpload(path_, a.token, {}, { name, type, buf });
+  if (r.status === 401) {
+    const fresh = await refreshLauncherToken(a);
+    if (!fresh) return { ok: false, error: 'Prisijunk iš naujo.' };
+    r = await pinnedUpload(path_, fresh.token, {}, { name, type, buf });
+  }
+  if (r.error) return { ok: false, error: 'Nepavyko pasiekti mctema.lt.' };
+  if (r.json && r.json.ok) return r.json;
+  return { ok: false, error: FRIEND_ERR[r.json && r.json.error] || 'Nepavyko įkelti.' };
+});
+
+ipcMain.handle('groups:leave', (_e, id) =>
+  friendsApi('POST', `/api/launcher/groups/${Number(id)}/leave`));
+ipcMain.handle('groups:history', (_e, p) =>
+  friendsApi('GET', `/api/launcher/groups/${Number(p && p.id)}/messages?after=${Number((p && p.after) || 0)}`));
+ipcMain.handle('groups:send', (_e, p) =>
+  friendsApi('POST', `/api/launcher/groups/${Number(p && p.id)}/messages`, {
+    body: String((p && p.body) || '').slice(0, 1000),
+    replyTo: p && p.replyTo ? Number(p.replyTo) : null,
+  }));
+// Link previews are fetched by the server, never here: a pasted link must not
+// be able to learn a player's IP or point the launcher at their own network.
+ipcMain.handle('chat:unfurl', (_e, url) =>
+  friendsApi('GET', `/api/launcher/unfurl?url=${encodeURIComponent(String(url || '').slice(0, 2000))}`));
+
+ipcMain.handle('chat:pin', (_e, p) => friendsApi('POST', '/api/launcher/chat/pin', {
+  kind: p && p.kind === 'group' ? 'group' : 'dm',
+  target: String((p && p.target) || ''),
+  pinned: !!(p && p.pinned),
 }));
 
 ipcMain.handle('chat:sendImage', async (_e, p) => {
   const to = String((p && p.to) || '');
+  const groupId = Number((p && p.groupId) || 0);
   const name = String((p && p.name) || 'nuotrauka.png').slice(0, 64);
   let buf;
   try { buf = Buffer.from(String((p && p.data) || ''), 'base64'); } catch { buf = null; }
@@ -257,11 +421,11 @@ ipcMain.handle('chat:sendImage', async (_e, p) => {
     a = await refreshLauncherToken(a);
     if (!a) return { ok: false, error: 'Prisijunk iš naujo.' };
   }
-  let r = await pinnedUpload('/api/launcher/messages/image', a.token, { to }, { name, type, buf });
+  let r = await pinnedUpload('/api/launcher/messages/image', a.token, groupId ? { groupId: String(groupId) } : { to }, { name, type, buf });
   if (r.status === 401) {
     const fresh = await refreshLauncherToken(a);
     if (!fresh) return { ok: false, error: 'Prisijunk iš naujo.' };
-    r = await pinnedUpload('/api/launcher/messages/image', fresh.token, { to }, { name, type, buf });
+    r = await pinnedUpload('/api/launcher/messages/image', fresh.token, groupId ? { groupId: String(groupId) } : { to }, { name, type, buf });
   }
   if (r.error) return { ok: false, error: 'Nepavyko pasiekti mctema.lt.' };
   if (r.json && r.json.ok) return r.json;
@@ -270,7 +434,7 @@ ipcMain.handle('chat:sendImage', async (_e, p) => {
 
 const MOD_HASHES = {
   'fabric-api.jar': 'bdff7fd7e220085cfad2ff9b1f40dde6534ae0b96cf378f97a374bc54cb9ed0f',
-  'mctemaclient.jar': 'ce0d0b51ebf0253eb74ff8f04ebdb78e3282b38793e2cb3b38ab1ec264303d7d',
+  'mctemaclient.jar': '43b64646e6f7d8475b7dcdb224f286604815f45296323e6200fee4b43fd4d1e6',
 };
 
 const resolveJava = () => resolveBundledJava({
@@ -307,6 +471,10 @@ function ensureMods() {
     optionalDir,
     optionalMods: loadConfig().optionalMods || [],
   });
+  // Rewrite the cape on every launch, not just when it is picked: a reinstall
+  // or a cleared game folder would otherwise leave the config naming a cape
+  // whose file is no longer there.
+  publishCape(loadConfig().currentCape);
 }
 
 const presence = createRichPresence({ clientId: DISCORD_CLIENT_ID, defaultState: SERVER.host });
@@ -369,8 +537,53 @@ function createWindow() {
   });
 
   hardenContents(win.webContents);
+  attachContextMenu(win.webContents);
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   win.once('ready-to-show', () => win.show());
+}
+
+/**
+ * The right-click menu people expect: copy what is selected, the usual editing
+ * items in a text box, and something sensible for an image or a link. Built
+ * from what Chromium reports about the spot that was clicked, so it never
+ * offers an action that does not apply.
+ */
+function attachContextMenu(contents) {
+  contents.on('context-menu', (_e, props) => {
+    const items = [];
+    const { editFlags } = props;
+
+    if (props.isEditable) {
+      items.push(
+        { label: 'Iškirpti', role: 'cut', enabled: editFlags.canCut },
+        { label: 'Kopijuoti', role: 'copy', enabled: editFlags.canCopy },
+        { label: 'Įklijuoti', role: 'paste', enabled: editFlags.canPaste },
+        { type: 'separator' },
+        { label: 'Pažymėti viską', role: 'selectAll' },
+      );
+    } else if (props.selectionText && props.selectionText.trim()) {
+      items.push({ label: 'Kopijuoti', role: 'copy' });
+    }
+
+    if (props.mediaType === 'image' && props.srcURL) {
+      if (items.length) items.push({ type: 'separator' });
+      items.push({
+        label: 'Kopijuoti paveikslėlį',
+        click: () => contents.copyImageAt(props.x, props.y),
+      });
+    }
+
+    if (props.linkURL && /^https?:\/\//.test(props.linkURL)) {
+      if (items.length) items.push({ type: 'separator' });
+      items.push(
+        { label: 'Atidaryti nuorodą', click: () => shell.openExternal(props.linkURL) },
+        { label: 'Kopijuoti nuorodą', click: () => clipboard.writeText(props.linkURL) },
+      );
+    }
+
+    if (!items.length) return;
+    Menu.buildFromTemplate(items).popup({ window: BrowserWindow.fromWebContents(contents) });
+  });
 }
 
 /**
@@ -393,6 +606,12 @@ function hardenContents(contents) {
   contents.setWindowOpenHandler(({ url }) => {
     if (/^https:\/\//.test(url)) shell.openExternal(url);
     return { action: 'deny' };
+  });
+  // Nothing in the launcher is meant to be a frame, so subframes never get to
+  // navigate anywhere. The CSP says the same thing; this is the half an
+  // injected tag cannot argue with.
+  contents.on('will-frame-navigate', (e) => {
+    if (!e.isMainFrame) e.preventDefault();
   });
   contents.on('will-attach-webview', (e) => e.preventDefault());
   // Nothing in the launcher needs the camera, microphone, location or
@@ -493,14 +712,49 @@ ipcMain.handle('crash:copy', () => {
 
 ipcMain.handle('config:get', () => loadConfig());
 
+/**
+ * Settings the UI is allowed to write, and what each one may hold.
+ *
+ * An allowlist rather than a merge. The config also holds things main owns -
+ * the skin and cape libraries, installed optional mods, the signed-in nick -
+ * and several of those are turned into file paths later. Letting the renderer
+ * put anything it likes in there would make a scripting bug in the UI worth
+ * far more than it should be.
+ */
+const CONFIG_SETTERS = {
+  ram: (v) => Math.min(16, Math.max(2, Number(v) || 4)),
+  closeOnPlay: (v) => !!v,
+  discordRpc: (v) => !!v,
+  toasts: (v) => !!v,
+  jvmArgs: (v) => String(v ?? '').slice(0, 512),
+  resolution: (v) => ({
+    w: Math.min(7680, Math.max(640, Number(v && v.w) || 1280)),
+    h: Math.min(4320, Math.max(480, Number(v && v.h) || 720)),
+    fullscreen: !!(v && v.fullscreen),
+  }),
+  // { "<nick>": { ...flags } } - keys are nicks, values are booleans only.
+  friendPrefs: (v) => {
+    const out = {};
+    for (const [nick, prefs] of Object.entries(v || {}).slice(0, 200)) {
+      if (!/^[a-z0-9_]{3,16}$/.test(nick)) continue;
+      const clean = {};
+      for (const [k, on] of Object.entries(prefs || {}).slice(0, 10)) {
+        if (/^[a-zA-Z]{1,24}$/.test(k)) clean[k] = !!on;
+      }
+      out[nick] = clean;
+    }
+    return out;
+  },
+};
+
 ipcMain.handle('config:set', (_e, patch) => {
-  const cfg = loadConfig();
-  const next = { ...cfg, ...(patch || {}) };
-  if (next.ram != null) next.ram = Math.min(16, Math.max(2, Number(next.ram) || 4));
-  if (next.username != null) next.username = String(next.username).slice(0, 16);
+  const next = loadConfig();
+  for (const [key, clean] of Object.entries(CONFIG_SETTERS)) {
+    if (patch && Object.prototype.hasOwnProperty.call(patch, key)) next[key] = clean(patch[key]);
+  }
   saveConfig(next);
   if (patch && 'discordRpc' in patch) {
-    if (patch.discordRpc) { setRpc('Launcheryje', SERVER.host, true); initRpc(); }
+    if (next.discordRpc) { setRpc('Launcheryje', SERVER.host, true); initRpc(); }
     else destroyRpc();
   }
   return next;
@@ -545,17 +799,14 @@ const skinsDir = path.join(gameDir, 'skins');
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 ipcMain.handle('skins:save', (_e, payload) => {
-  const m = /^data:image\/png;base64,(.+)$/.exec(String((payload && payload.dataUrl) || ''));
-  if (!m) return { ok: false, error: 'Netinkamas failas - reikia PNG.' };
-  const buf = Buffer.from(m[1], 'base64');
-  if (buf.length > 262144 || buf.length < 33 || !buf.slice(0, 8).equals(PNG_MAGIC)) {
-    return { ok: false, error: 'Netinkamas PNG failas.' };
+  const r = readPng(payload && payload.dataUrl);
+  if (r.error) return { ok: false, error: r.error };
+  if (r.w !== 64 || (r.h !== 64 && r.h !== 32)) {
+    return { ok: false, error: 'Skinas turi būti 64x64 arba 64x32 PNG.' };
   }
-  const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20);
-  if (w !== 64 || (h !== 64 && h !== 32)) return { ok: false, error: 'Skinas turi būti 64x64 arba 64x32 PNG.' };
   const id = crypto.randomUUID();
   fs.mkdirSync(skinsDir, { recursive: true });
-  fs.writeFileSync(path.join(skinsDir, `${id}.png`), buf);
+  fs.writeFileSync(path.join(skinsDir, `${id}.png`), r.buf);
   const cfg = loadConfig();
   const skin = { id, name: String((payload && payload.name) || 'be vardo').slice(0, 24),
     variant: payload && payload.variant === 'slim' ? 'slim' : 'wide', favorite: false, addedAt: Date.now() };
@@ -582,6 +833,105 @@ ipcMain.handle('skins:delete', (_e, id) => {
 ipcMain.handle('skins:fav', (_e, p) => {
   const c = loadConfig();
   saveConfig({ ...c, skins: (c.skins || []).map((s) => s.id === (p && p.id) ? { ...s, favorite: !!p.favorite } : s) });
+  return true;
+});
+
+/** The decoded PNG with its real dimensions, or an error. The renderer says a
+ *  file is a 64x32 PNG; the header is what decides. */
+function readPng(dataUrl) {
+  const m = /^data:image\/png;base64,(.+)$/.exec(String(dataUrl || ''));
+  if (!m) return { error: 'Netinkamas failas - reikia PNG.' };
+  const buf = Buffer.from(m[1], 'base64');
+  if (buf.length > 262144 || buf.length < 33 || !buf.slice(0, 8).equals(PNG_MAGIC)) {
+    return { error: 'Netinkamas PNG failas.' };
+  }
+  return { buf, w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
+}
+
+// Capes ship with the launcher and are not something a player supplies: the
+// cape you wear is a thing the server can grant, so letting anyone load their
+// own PNG would make it meaningless. The manifest is read once - it is ours,
+// and it does not change while the app runs.
+const builtinCapesDir = path.join(__dirname, 'assets', 'capes');
+let builtinCapes = null;
+
+function readBuiltinCapes() {
+  if (builtinCapes) return builtinCapes;
+  try {
+    const list = JSON.parse(fs.readFileSync(path.join(builtinCapesDir, 'capes.json'), 'utf8'));
+    builtinCapes = list
+      // The manifest is ours, but a file name still only ever names a file in
+      // this folder - never a path out of it.
+      .filter((c) => isPlainFileName(String(c.file || '')))
+      .map((c) => ({
+        id: c.file,
+        name: String(c.name || c.file).slice(0, 32),
+        frames: Number(c.frames) || 1,
+        fps: Number(c.fps) || 0,
+        // Whether the sheet paints its elytra half. Capes that do not leave
+        // you with a plain elytra rather than their own.
+        elytra: !!c.elytra,
+        url: pathToFileURL(path.join(builtinCapesDir, c.file)).href,
+      }));
+  } catch {
+    builtinCapes = [];
+  }
+  return builtinCapes;
+}
+
+ipcMain.handle('capes:list', () => ({
+  current: loadConfig().currentCape || null,
+  capes: readBuiltinCapes(),
+}));
+
+// Where the client mod looks for the cape you picked. The launcher owns this
+// folder and rewrites it on every change; the mod only ever reads it, so the
+// two never need to agree on anything beyond the file names.
+const capeOutDir = path.join(gameDir, 'mctema');
+
+/**
+ * Publish the chosen cape for the client mod, or clear it.
+ *
+ * The sheet is copied rather than referenced: the launcher can be updated or
+ * moved while the game is running, and a cape that vanishes mid-session
+ * because its source went away would be a puzzling bug to chase.
+ */
+function publishCape(id) {
+  try {
+    fs.mkdirSync(capeOutDir, { recursive: true });
+    const png = path.join(capeOutDir, 'cape.png');
+    const meta = path.join(capeOutDir, 'cape.json');
+    const cape = readBuiltinCapes().find((c) => c.id === id);
+    if (!cape) {
+      fs.rmSync(png, { force: true });
+      fs.rmSync(meta, { force: true });
+      return;
+    }
+    fs.copyFileSync(path.join(builtinCapesDir, cape.id), png);
+    fs.writeFileSync(meta, JSON.stringify({
+      name: cape.name,
+      frames: cape.frames,
+      fps: cape.fps,
+      // Bumped on every change so the mod can notice without watching the file.
+      version: Date.now(),
+    }));
+  } catch {
+    // A cape is cosmetic: failing to write it must never stop anything else.
+  }
+}
+
+// null is a real choice here: it means "no cape".
+ipcMain.handle('capes:set', (_e, id) => {
+  const c = loadConfig();
+  if (id === null) {
+    saveConfig({ ...c, currentCape: null });
+    publishCape(null);
+    return true;
+  }
+  if (readBuiltinCapes().some((x) => x.id === id)) {
+    saveConfig({ ...c, currentCape: id });
+    publishCape(id);
+  }
   return true;
 });
 

@@ -20,9 +20,11 @@
     modal.classList.remove('hidden');
   });
 
+  // Deliberately no click-outside-to-close: a stray click beside a crash
+  // report would throw away the log before you had a chance to send it. The
+  // close button is the way out.
   const close = () => modal.classList.add('hidden');
   $('cr-close').addEventListener('click', close);
-  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
 
   $('cr-relaunch').addEventListener('click', () => {
     close();

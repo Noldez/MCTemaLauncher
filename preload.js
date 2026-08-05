@@ -1,3 +1,5 @@
+// Sandboxed preload: `require` here resolves only electron and a few built-ins,
+// so nothing from lib/ can be pulled in. Anything that needs it goes over IPC.
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
@@ -25,6 +27,8 @@ contextBridge.exposeInMainWorld('api', {
   setSkin: (id) => ipcRenderer.invoke('skins:set', id),
   deleteSkin: (id) => ipcRenderer.invoke('skins:delete', id),
   favSkin: (p) => ipcRenderer.invoke('skins:fav', p),
+  listCapes: () => ipcRenderer.invoke('capes:list'),
+  setCape: (id) => ipcRenderer.invoke('capes:set', id),
   listMods: () => ipcRenderer.invoke('mods:list'),
   listOMods: () => ipcRenderer.invoke('omods:list'),
   toggleOMod: (p) => ipcRenderer.invoke('omods:toggle', p),
@@ -39,6 +43,7 @@ contextBridge.exposeInMainWorld('api', {
   voteShot: (p) => ipcRenderer.invoke('gallery:vote', p),
   authState: () => ipcRenderer.invoke('auth:state'),
   authLogin: (p) => ipcRenderer.invoke('auth:login', p),
+  authRegister: (p) => ipcRenderer.invoke('auth:register', p),
   authLogout: () => ipcRenderer.invoke('auth:logout'),
   friendsList: () => ipcRenderer.invoke('friends:list'),
   friendRequest: (to) => ipcRenderer.invoke('friends:request', to),
@@ -50,7 +55,20 @@ contextBridge.exposeInMainWorld('api', {
   chatInbox: () => ipcRenderer.invoke('chat:inbox'),
   chatHistory: (p) => ipcRenderer.invoke('chat:history', p),
   chatSend: (p) => ipcRenderer.invoke('chat:send', p),
+  chatEdit: (p) => ipcRenderer.invoke('chat:edit', p),
+  chatDelete: (id) => ipcRenderer.invoke('chat:delete', id),
+  chatTyping: (p) => ipcRenderer.invoke('chat:typing', p),
   chatSendImage: (p) => ipcRenderer.invoke('chat:sendImage', p),
+  groupCreate: (p) => ipcRenderer.invoke('groups:create', p),
+  groupAddMember: (p) => ipcRenderer.invoke('groups:addMember', p),
+  groupLeave: (id) => ipcRenderer.invoke('groups:leave', id),
+  chatSendShot: (p) => ipcRenderer.invoke('chat:sendShot', p),
+  groupRename: (p) => ipcRenderer.invoke('groups:rename', p),
+  groupIcon: (p) => ipcRenderer.invoke('groups:icon', p),
+  groupHistory: (p) => ipcRenderer.invoke('groups:history', p),
+  groupSend: (p) => ipcRenderer.invoke('groups:send', p),
+  chatPin: (p) => ipcRenderer.invoke('chat:pin', p),
+  chatUnfurl: (url) => ipcRenderer.invoke('chat:unfurl', url),
   onLog: (cb) => ipcRenderer.on('mc:log', (_e, m) => cb(m)),
   onProgress: (cb) => ipcRenderer.on('mc:progress', (_e, p) => cb(p)),
   onDownload: (cb) => ipcRenderer.on('mc:download', (_e, d) => cb(d)),
