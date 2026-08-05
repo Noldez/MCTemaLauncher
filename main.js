@@ -434,7 +434,7 @@ ipcMain.handle('chat:sendImage', async (_e, p) => {
 
 const MOD_HASHES = {
   'fabric-api.jar': 'bdff7fd7e220085cfad2ff9b1f40dde6534ae0b96cf378f97a374bc54cb9ed0f',
-  'mctemaclient.jar': '069d648822566843e2a2e82c207151327a8a586a834243f78d228665786b2ba6',
+  'mctemaclient.jar': '900f94bc7a77d0f06f75675fcec2d058f1710414a2b16be725ea50d9b2ac5e76',
 };
 
 const resolveJava = () => resolveBundledJava({
@@ -1367,7 +1367,10 @@ ipcMain.handle('game:play', async (_e, payload) => {
     version: { number: MC_VERSION, type: 'release', custom: fabricProfile },
     memory: { max: `${ram}G`, min: '1G' },
     javaPath: resolveJava(),
-    quickPlay: { type: 'multiplayer', identifier: `${SERVER.host}:${SERVER.port}` },
+    // No quickPlay: the game opens on the MC Tema menu rather than dropping
+    // straight into the server. That menu now has a singleplayer button too,
+    // and joining before it is shown means a player leaving a world lands on
+    // a screen they were never given.
   };
 
   const res = cfg.resolution || {};
@@ -1416,7 +1419,7 @@ ipcMain.handle('game:play', async (_e, payload) => {
     sessionStart = Date.now();
     send('mc:launched', true);
     setRpc('Žaidžia Minecraft', SERVER.host, true);
-    log('Minecraft paleistas - jungiamasi prie ' + SERVER.host + '.');
+    log('Minecraft paleistas.');
     if (cfg.closeOnPlay && win && !win.isDestroyed()) win.hide();
     return { ok: true };
   } catch (err) {
