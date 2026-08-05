@@ -192,6 +192,14 @@ window.ui.logout = async () => {
   await window.api.authLogout();
   window.ui.showView('home');
   gate.classList.remove('hidden');
+  setMode(false);
+  // Tell the views the account changed, the same way logging in does - the
+  // handlers read fields straight off this, so it has to be a real config
+  // rather than null. Without it they keep whoever just signed out on screen,
+  // and the next person to sign in sees them until the next poll.
+  const c = await window.api.getConfig();
+  window.ui.state.cfg = c;
+  document.dispatchEvent(new CustomEvent('cfg', { detail: c }));
 };
 
 $('btn-min').addEventListener('click', () => window.api.minimize());

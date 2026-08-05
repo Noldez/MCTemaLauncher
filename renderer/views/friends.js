@@ -185,7 +185,17 @@
   }));
 
   document.addEventListener('status', render);
-  document.addEventListener('cfg', render);
+  // Signing in as someone else has to refetch, not redraw. Rendering again
+  // just painted the previous account's friends until the 30s poll came
+  // round, which looked like the list had frozen. Clearing first means their
+  // names are never on screen under your account, even for one frame.
+  document.addEventListener('cfg', () => {
+    live = { friends: [], received: [], sent: [] };
+    seenReqIds = null;
+    loading = true;
+    render();
+    refresh();
+  });
 
   const menu = document.getElementById('fr-menu');
   function openMenu(e, f) {
