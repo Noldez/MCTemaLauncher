@@ -1,0 +1,415 @@
+[
+  {
+    "file": "4th-hokage-cloak.png",
+    "name": "4th Hokage Cloak",
+    "frames": 1,
+    "fps": 0,
+    "elytra": true
+  },
+  {
+    "file": "adorable-bunny-girl.png",
+    "name": "Adorable Bunny Girl",
+    "frames": 24,
+    "fps": 17,
+    "elytra": true
+  },
+  {
+    "file": "adviser-999.png",
+    "name": "Adviser 999",
+    "frames": 7,
+    "fps": 5,
+    "elytra": false
+  },
+  {
+    "file": "animated-fire-cape.png",
+    "name": "Animated Fire Cape",
+    "frames": 32,
+    "fps": 24,
+    "elytra": true
+  },
+  {
+    "file": "astelic-badlion-cape.png",
+    "name": "Astelic Badlion Cape",
+    "frames": 10,
+    "fps": 7,
+    "elytra": true
+  },
+  {
+    "file": "astelic-purple-sky.png",
+    "name": "Astelic Purple Sky",
+    "frames": 15,
+    "fps": 24,
+    "elytra": false
+  },
+  {
+    "file": "badlion-demon-cape.png",
+    "name": "Badlion Demon cape",
+    "frames": 8,
+    "fps": 5,
+    "elytra": false
+  },
+  {
+    "file": "badlion-rainbow-cape.png",
+    "name": "badlion rainbow cape",
+    "frames": 12,
+    "fps": 14,
+    "elytra": false
+  },
+  {
+    "file": "bastighg-zickzack-1m.png",
+    "name": "BastiGHG ZickZack 1M",
+    "frames": 1,
+    "fps": 0,
+    "elytra": true
+  },
+  {
+    "file": "bastighg-zickzackv4b.png",
+    "name": "BastiGHG ZickZackv4B",
+    "frames": 1,
+    "fps": 0,
+    "elytra": true
+  },
+  {
+    "file": "battery.png",
+    "name": "Battery",
+    "frames": 7,
+    "fps": 5,
+    "elytra": true
+  },
+  {
+    "file": "blacklight.png",
+    "name": "BlackLight",
+    "frames": 24,
+    "fps": 13,
+    "elytra": false
+  },
+  {
+    "file": "blue-wizard-animated.png",
+    "name": "blue wizard animated",
+    "frames": 6,
+    "fps": 10,
+    "elytra": true
+  },
+  {
+    "file": "dreamystars.png",
+    "name": "Dreamystars",
+    "frames": 16,
+    "fps": 10,
+    "elytra": true
+  },
+  {
+    "file": "duck-cape.png",
+    "name": "Duck Cape",
+    "frames": 1,
+    "fps": 0,
+    "elytra": true
+  },
+  {
+    "file": "eeeeeeeeeeeeeeeeeeee.png",
+    "name": "EEEEEEEEEEEEEEEEEEEE",
+    "frames": 1,
+    "fps": 0,
+    "elytra": true
+  },
+  {
+    "file": "electroghgh.png",
+    "name": "electroghgh",
+    "frames": 60,
+    "fps": 24,
+    "elytra": true
+  },
+  {
+    "file": "enchanted-totem.png",
+    "name": "Enchanted Totem",
+    "frames": 15,
+    "fps": 24,
+    "elytra": true
+  },
+  {
+    "file": "gamerboy80-eyes.png",
+    "name": "Gamerboy80 Eyes",
+    "frames": 15,
+    "fps": 5,
+    "elytra": false
+  },
+  {
+    "file": "gojo.png",
+    "name": "gojo",
+    "frames": 64,
+    "fps": 10,
+    "elytra": true
+  },
+  {
+    "file": "graffiti-cape.png",
+    "name": "Graffiti cape",
+    "frames": 1,
+    "fps": 0,
+    "elytra": false
+  },
+  {
+    "file": "green-chains.png",
+    "name": "Green Chains",
+    "frames": 64,
+    "fps": 10,
+    "elytra": true
+  },
+  {
+    "file": "gura.png",
+    "name": "Gura",
+    "frames": 1,
+    "fps": 0,
+    "elytra": true
+  },
+  {
+    "file": "hardcore.png",
+    "name": "HardCore",
+    "frames": 9,
+    "fps": 10,
+    "elytra": true
+  },
+  {
+    "file": "hd-cute-cape.png",
+    "name": "HD Cute Cape",
+    "frames": 5,
+    "fps": 4,
+    "elytra": true
+  },
+  {
+    "file": "hu-tao-ghost-anim.png",
+    "name": "hu tao ghost anim",
+    "frames": 15,
+    "fps": 5,
+    "elytra": true
+  },
+  {
+    "file": "hutao-genshin-cape.png",
+    "name": "HuTao Genshin Cape",
+    "frames": 1,
+    "fps": 0,
+    "elytra": true
+  },
+  {
+    "file": "hypnotizing-hearts.png",
+    "name": "Hypnotizing Hearts",
+    "frames": 60,
+    "fps": 10,
+    "elytra": true
+  },
+  {
+    "file": "ice-cape.png",
+    "name": "Ice Cape",
+    "frames": 41,
+    "fps": 20,
+    "elytra": true
+  },
+  {
+    "file": "intel-edits-cape.png",
+    "name": "Intel Edits Cape",
+    "frames": 1,
+    "fps": 0,
+    "elytra": true
+  },
+  {
+    "file": "intel-wave.png",
+    "name": "Intel Wave",
+    "frames": 12,
+    "fps": 5,
+    "elytra": false
+  },
+  {
+    "file": "japanese-enderman.png",
+    "name": "Japanese Enderman",
+    "frames": 12,
+    "fps": 5,
+    "elytra": false
+  },
+  {
+    "file": "kita-doodle-dance.png",
+    "name": "Kita Doodle Dance",
+    "frames": 4,
+    "fps": 10,
+    "elytra": true
+  },
+  {
+    "file": "lazuli-glass-cape.png",
+    "name": "Lazuli Glass Cape",
+    "frames": 1,
+    "fps": 0,
+    "elytra": true
+  },
+  {
+    "file": "lightning.png",
+    "name": "Lightning",
+    "frames": 11,
+    "fps": 5,
+    "elytra": false
+  },
+  {
+    "file": "lizskies-cloak-black.png",
+    "name": "lizskies cloak black",
+    "frames": 15,
+    "fps": 10,
+    "elytra": true
+  },
+  {
+    "file": "lunar-car.png",
+    "name": "Lunar Car",
+    "frames": 16,
+    "fps": 5,
+    "elytra": false
+  },
+  {
+    "file": "manhal-iq-lunar-cape.png",
+    "name": "Manhal_IQ Lunar cape",
+    "frames": 7,
+    "fps": 5,
+    "elytra": false
+  },
+  {
+    "file": "marisa-kirisame.png",
+    "name": "Marisa Kirisame",
+    "frames": 1,
+    "fps": 0,
+    "elytra": true
+  },
+  {
+    "file": "nigell12animatedcap2.png",
+    "name": "NigelL12AnimatedCap2",
+    "frames": 16,
+    "fps": 24,
+    "elytra": true
+  },
+  {
+    "file": "origin-realms-cape.png",
+    "name": "Origin Realms Cape",
+    "frames": 1,
+    "fps": 0,
+    "elytra": true
+  },
+  {
+    "file": "pink-particles.png",
+    "name": "Pink Particles",
+    "frames": 64,
+    "fps": 10,
+    "elytra": true
+  },
+  {
+    "file": "purple-girl.png",
+    "name": "Purple Girl",
+    "frames": 31,
+    "fps": 10,
+    "elytra": true
+  },
+  {
+    "file": "purpled-cloak.png",
+    "name": "Purpled Cloak",
+    "frames": 15,
+    "fps": 7,
+    "elytra": false
+  },
+  {
+    "file": "purplerocket.png",
+    "name": "purplerocket",
+    "frames": 8,
+    "fps": 5,
+    "elytra": false
+  },
+  {
+    "file": "rainbow-v3.png",
+    "name": "Rainbow V3",
+    "frames": 35,
+    "fps": 13,
+    "elytra": true
+  },
+  {
+    "file": "red-spider-lily.png",
+    "name": "Red Spider Lily",
+    "frames": 24,
+    "fps": 10,
+    "elytra": true
+  },
+  {
+    "file": "rickroll.png",
+    "name": "Rickroll",
+    "frames": 17,
+    "fps": 5,
+    "elytra": true
+  },
+  {
+    "file": "rubiks-cube.png",
+    "name": "Rubiks Cube",
+    "frames": 25,
+    "fps": 10,
+    "elytra": true
+  },
+  {
+    "file": "shiny-pickaxe-v2-x16.png",
+    "name": "Shiny Pickaxe V2 x16",
+    "frames": 22,
+    "fps": 7,
+    "elytra": true
+  },
+  {
+    "file": "skyrim.png",
+    "name": "Skyrim",
+    "frames": 1,
+    "fps": 0,
+    "elytra": false
+  },
+  {
+    "file": "stimpy-purple-sword.png",
+    "name": "Stimpy purple sword",
+    "frames": 3,
+    "fps": 5,
+    "elytra": false
+  },
+  {
+    "file": "thirtyvirus-code-red.png",
+    "name": "ThirtyVirus Code Red",
+    "frames": 11,
+    "fps": 10,
+    "elytra": true
+  },
+  {
+    "file": "tower.png",
+    "name": "Tower",
+    "frames": 8,
+    "fps": 5,
+    "elytra": false
+  },
+  {
+    "file": "tryhard-dragon-cape.png",
+    "name": "Tryhard Dragon Cape",
+    "frames": 11,
+    "fps": 13,
+    "elytra": true
+  },
+  {
+    "file": "vanilla-extract-cape.png",
+    "name": "Vanilla Extract Cape",
+    "frames": 17,
+    "fps": 10,
+    "elytra": true
+  },
+  {
+    "file": "vers-glitched.png",
+    "name": "Vers glitched",
+    "frames": 15,
+    "fps": 5,
+    "elytra": false
+  },
+  {
+    "file": "water-bubble.png",
+    "name": "Water Bubble",
+    "frames": 64,
+    "fps": 10,
+    "elytra": true
+  },
+  {
+    "file": "zero-two.png",
+    "name": "Zero Two",
+    "frames": 5,
+    "fps": 10,
+    "elytra": true
+  }
+]

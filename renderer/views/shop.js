@@ -151,10 +151,9 @@
     $('shop-modal').classList.add('hidden');
   }
 
+  // Closing only through the buttons: a misclick beside a purchase dialog
+  // should not silently drop what you were about to confirm.
   $('sm-cancel').addEventListener('click', closeConfirm);
-  $('shop-modal').addEventListener('click', (e) => {
-    if (e.target === $('shop-modal')) closeConfirm();
-  });
 
   $('sm-buy').addEventListener('click', async () => {
     if (!pending || inFlight) return;
@@ -238,4 +237,9 @@
     if (hero) hero.textContent = '-';
     load();
   });
+
+  // The startup cfg event can fire before this script runs, in which case the
+  // listener above never sees it and the balance sits at "-" until something
+  // else happens. Load once on boot if the config is already there.
+  if (window.ui.state.cfg) window.ui.bootTask(load());
 })();

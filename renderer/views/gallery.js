@@ -62,6 +62,10 @@
     };
     bar.append(
       mk('fa-copy', 'Kopijuoti', () => window.api.copyShot(s.path)),
+      mk('fa-paper-plane', 'Siųsti draugui', () => {
+        L.classList.add('hidden');
+        if (window.relayShareShot) window.relayShareShot(s.path);
+      }),
       mk('fa-up-right-from-square', 'Atidaryti', () => window.api.openShot(s.path)),
       mk('fa-share-nodes', 'Į bendruomenės galeriją', () => {
         bar.textContent = '';

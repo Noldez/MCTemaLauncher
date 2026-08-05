@@ -33,11 +33,12 @@ One click installs Minecraft, Fabric and Java, signs you in and drops you on `pl
 |---|---|
 | **One-click play** | Installs Minecraft 1.21.11 + Fabric with a bundled Java 21 runtime and joins the server automatically |
 | **Account login** | Verified over certificate-pinned TLS, stored in the OS keystore - DPAPI on Windows, libsecret or kwallet on Linux |
-| **Friends & chat** | Live presence, direct messages with images, native notifications |
+| **Register in the launcher** | Create an account without joining the server first, rate limited per connection |
+| **Relay** | Direct messages and group chats: replies, edits, read receipts, typing, pinned conversations, image drops and link previews |
 | **Server news** | The latest posts from mctema.lt on the home screen |
 | **Shop** | Ranks, keys and cosmetics bought with auksiniai without leaving the launcher |
 | **Screenshot gallery** | Browse local shots, submit the best to the community gallery |
-| **Skin locker** | Local skin collection with a live 3D preview |
+| **Locker** | Skin collection with a live 3D preview, and 59 capes - animated ones included - that render in game through our client |
 | **Optional mods** | Sodium, Lithium, Iris and more from Modrinth, checksum-verified on every launch |
 | **In-game features** | Server settings in the pause menu, tab-list badges, Residence claim previews |
 | **Crash help** | Names the likely culprit and offers to send the log, so tickets arrive with evidence |

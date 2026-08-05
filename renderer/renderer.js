@@ -14,7 +14,12 @@ function fmtAgo(ts) {
   const h = Math.floor(m / 60); if (h < 24) return `prieš ${h} val.`;
   const d = Math.floor(h / 24); return `prieš ${d} d.`;
 }
-const headUrl = (nick, size) => `https://mc-heads.net/avatar/${encodeURIComponent(nick || 'MHF_Steve')}/${size || 32}`;
+// /head is the isometric 3D render, used wherever an avatar stands on its own.
+const headUrl = (nick, size) => `https://mc-heads.net/head/${encodeURIComponent(nick || 'MHF_Steve')}/${size || 32}`;
+// /avatar is the flat face crop. The 3D render carries transparent margins, so
+// it looks broken when several are tiled into one square - group avatars use
+// this instead.
+const faceUrl = (nick, size) => `https://mc-heads.net/avatar/${encodeURIComponent(nick || 'MHF_Steve')}/${size || 32}`;
 
 // Flat front-view skin render for machines without WebGL (VMs, blocklisted GPUs).
 async function flatSkin(canvas, url, variant) {
@@ -87,7 +92,7 @@ function ambientFx(host, cv) {
 }
 
 window.ui = {
-  $, el, fmtAgo, headUrl, flatSkin, swapCanvas, ambientFx,
+  $, el, fmtAgo, headUrl, faceUrl, flatSkin, swapCanvas, ambientFx,
   openUrl: (u) => window.api.openExternal(u),
   state: { cfg: null, status: null },
   showView(name) {
@@ -104,29 +109,80 @@ window.ui = {
 const splash = $('boot-splash');
 const gate = $('login-gate');
 const bootAt = Date.now();
-function hideSplash() {
-  const wait = Math.max(0, 1100 - (Date.now() - bootAt));
-  setTimeout(() => splash.classList.add('hide'), wait);
-}
+
+// The splash used to hide on a timer, so it could finish before the balance,
+// friends or news had arrived and you would watch them pop in afterwards. Views
+// register their first load here and it waits for the lot.
+const bootTasks = [];
+let bootSealed = false;
+window.ui.bootTask = (p) => {
+  if (bootSealed || !p || typeof p.then !== 'function') return p;
+  bootTasks.push(Promise.resolve(p).catch(() => {}));
+  return p;
+};
+
 (async () => {
   let st = { loggedIn: false };
   try { st = await window.api.authState(); } catch {}
   gate.classList.toggle('hidden', st.loggedIn);
-  hideSplash();
+
+  // Give the view scripts a tick to register, then wait for them - but never
+  // trap anyone behind a splash: a slow or dead network still lets the
+  // launcher open, it just arrives with less filled in.
+  await new Promise((r) => setTimeout(r, 0));
+  const settled = Promise.all(bootTasks);
+  const floor = new Promise((r) => setTimeout(r, Math.max(0, 900 - (Date.now() - bootAt))));
+  const cap = new Promise((r) => setTimeout(r, 7000));
+  await Promise.race([Promise.all([settled, floor]), cap]);
+  bootSealed = true;
+  splash.classList.add('hide');
 })();
 document.querySelectorAll('#login-gate [data-url]').forEach((b) =>
   b.addEventListener('click', (e) => { e.preventDefault(); window.api.openExternal(b.dataset.url); }));
+// The same form does both jobs; registering only adds a confirm field. Every
+// rule that matters is checked by the server - this end just spares people a
+// round trip for the obvious mistakes.
+let registerMode = false;
+
+function setMode(register) {
+  registerMode = register;
+  $('lg-pass2-wrap').classList.toggle('hidden', !register);
+  $('lg-submit').textContent = register ? 'Sukurti paskyrą' : 'Prisijungti';
+  $('lg-swap-text').textContent = register ? 'Jau turi paskyrą?' : 'Neturi paskyros?';
+  $('lg-swap').textContent = register ? 'Prisijungti' : 'Registruotis';
+  $('lg-pass').setAttribute('autocomplete', register ? 'new-password' : 'current-password');
+  $('lg-error').textContent = '';
+  $('lg-pass2').value = '';
+}
+$('lg-swap').addEventListener('click', () => setMode(!registerMode));
+
 document.getElementById('lg-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = $('lg-submit');
+  const username = $('lg-user').value.trim();
+  const password = $('lg-pass').value;
+
+  if (registerMode) {
+    if (!/^[A-Za-z0-9_]{3,16}$/.test(username)) {
+      $('lg-error').textContent = 'Slapyvardis: 3-16 simbolių (raidės, skaičiai, _).';
+      return;
+    }
+    if (password.length < 6) { $('lg-error').textContent = 'Slaptažodis - bent 6 simboliai.'; return; }
+    if (password !== $('lg-pass2').value) { $('lg-error').textContent = 'Slaptažodžiai nesutampa.'; return; }
+  }
+
   btn.disabled = true;
-  btn.textContent = 'Jungiamasi...';
-  const r = await window.api.authLogin({ username: $('lg-user').value.trim(), password: $('lg-pass').value });
+  btn.textContent = registerMode ? 'Kuriama...' : 'Jungiamasi...';
+  // Registering logs you straight in, so there is one less form to fill.
+  const r = registerMode
+    ? await window.api.authRegister({ username, password })
+    : await window.api.authLogin({ username, password });
   btn.disabled = false;
-  btn.textContent = 'Prisijungti';
+  btn.textContent = registerMode ? 'Sukurti paskyrą' : 'Prisijungti';
   if (!r.ok) { $('lg-error').textContent = r.error || 'Klaida.'; return; }
   $('lg-error').textContent = '';
   $('lg-pass').value = '';
+  $('lg-pass2').value = '';
   gate.classList.add('hidden');
   const c = await window.api.getConfig();
   window.ui.state.cfg = c;
@@ -159,11 +215,11 @@ async function refreshStatus() {
   $('online-count').textContent = s.online ? s.players.online : '-';
   document.dispatchEvent(new CustomEvent('status', { detail: s }));
 }
-window.api.getConfig().then((c) => {
+window.ui.bootTask(window.api.getConfig().then((c) => {
   window.ui.state.cfg = c;
   document.dispatchEvent(new CustomEvent('cfg', { detail: c }));
-});
-refreshStatus();
+}));
+window.ui.bootTask(refreshStatus());
 setInterval(refreshStatus, 15000);
 
 const notifs = [];

@@ -2,7 +2,9 @@
 <html lang="lt">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; img-src 'self' data: file: https://mc-heads.net https://mctema.lt https://cdn.modrinth.com; script-src 'self'; font-src 'self'">
+  <!-- frame-src is the only place remote content may run, and only these
+       players, only after the player clicks play. Everything else stays 'self'. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; img-src 'self' data: file: https://mc-heads.net https://mctema.lt https://cdn.modrinth.com; script-src 'self'; font-src 'self'; frame-src 'none'">
   <title>MC Tema Launcher</title>
   <link rel="stylesheet" href="fa/css/all.min.css">
   <link rel="stylesheet" href="styles.css">
@@ -157,7 +159,7 @@
         <div class="relay">
           <aside class="rl-inbox">
             <h2>MC Tema Relay</h2>
-            <div class="rl-search"><label class="fr-find"><i class="fa-solid fa-magnifying-glass"></i><input id="rl-search-inp" placeholder="Ieškoti..." maxlength="16" spellcheck="false"></label><button class="rl-new" id="rl-new" title="Nauja žinutė"><i class="fa-regular fa-square-plus"></i></button></div>
+            <div class="rl-search"><label class="fr-find"><i class="fa-solid fa-magnifying-glass"></i><input id="rl-search-inp" placeholder="Ieškoti..." maxlength="16" spellcheck="false"></label><button class="rl-new" id="rl-new" title="Nauja žinutė"><i class="fa-solid fa-plus"></i></button></div>
             <div id="rl-list" class="rl-list"></div>
           </aside>
           <section class="rl-chat" id="rl-chat">
@@ -199,24 +201,38 @@
         <div class="locker">
           <h2 class="pg-title">SPINTA</h2>
           <div class="lk-top">
-            <div class="lk-col">
+            <div class="lk-col lk-col-skin">
               <div class="sect-label">DABARTINIS SKINAS</div>
-              <div class="lk-viewer"><canvas id="lk-canvas"></canvas><div id="lk-viewer-hint" class="lk-hint">Įkelk skiną, kad matytum jį čia</div></div>
+              <div class="lk-viewer">
+                <canvas id="lk-canvas"></canvas>
+                <div id="lk-viewer-hint" class="lk-hint">Įkelk skiną, kad matytum jį čia</div>
+                <button class="lk-vbtn rot" id="lk-rotate" title="Sukti"><i class="fa-solid fa-rotate"></i></button>
+                <button class="lk-vbtn walk" id="lk-walk" title="Judesys"><i class="fa-solid fa-play"></i></button>
+              </div>
             </div>
-            <div class="lk-col">
+            <div class="lk-col lk-col-up">
               <div class="sect-label">ĮKELTI SKINĄ</div>
               <label class="lk-drop" id="lk-drop"><i class="fa-solid fa-plus"></i><span>Tempk failą arba spausk</span><input id="lk-file" type="file" accept="image/png" hidden></label>
-              <div class="sect-label">CAPES</div>
-              <div class="lk-capes"><div class="cape"></div><div class="cape c2"></div><div class="cape c3"></div><div class="cape c4"></div></div>
-              <p class="lk-note">Skinai kol kas matomi tik launcheryje - serveryje atsiras vėliau.</p>
+              <p class="lk-wip"><i class="fa-solid fa-screwdriver-wrench"></i> Skinai kol kas keičiasi tik launcheryje - serveryje jų dar nesimato. Kol kas veikia tik cape'ai. Dirbame.</p>
+              <div class="sect-head">
+                <div class="sect-label">SKINAI</div>
+                <div class="sect-nav"><button id="lk-skin-prev" title="Atgal"><i class="fa-solid fa-chevron-left"></i></button><button id="lk-skin-next" title="Pirmyn"><i class="fa-solid fa-chevron-right"></i></button></div>
+              </div>
+              <div id="lk-skins" class="lk-row"></div>
             </div>
           </div>
-          <div class="sect-label">MĖGSTAMIAUSI</div>
-          <div id="lk-favs" class="lk-row"></div>
-          <div class="sect-label">NAUJAUSI</div>
-          <div id="lk-latest" class="lk-row"></div>
+          <div class="sect-head">
+            <div class="sect-label">CAPES</div>
+            <div class="sect-nav"><button id="lk-cape-prev" title="Atgal"><i class="fa-solid fa-chevron-left"></i></button><button id="lk-cape-next" title="Pirmyn"><i class="fa-solid fa-chevron-right"></i></button></div>
+          </div>
+          <div id="lk-capes" class="lk-capes"></div>
+          <div class="lk-legend">
+            <span><i class="fa-solid fa-feather-pointed on"></i> turi savo elytra tekstūrą</span>
+            <span><i class="fa-solid fa-feather-pointed"></i> elytra liks įprastas</span>
+            <span><b>ANIM</b> animuotas</span>
+          </div>
+          <p class="lk-note"><i class="fa-solid fa-circle-info"></i> Cape'ą matai tu ir visi, kas žaidžia su MC Tema klientu.</p>
         </div>
-        <div id="lk-modal" class="lk-modal hidden"></div>
       </section>
       <section class="view" id="view-mods">
         <div class="modsv">
@@ -338,6 +354,11 @@
     </main>
   </div>
 
+  <!-- Outside the views on purpose: .view carries a filled transform animation,
+       which makes it a containing block, and a position:fixed overlay inside it
+       would anchor to the view rather than the window. -->
+  <div id="lk-modal" class="lk-modal hidden"></div>
+
   <!-- boot splash -->
   <div id="boot-splash" class="boot-splash">
     <img src="logo.png" alt="MC Tema" class="bs-logo">
@@ -395,9 +416,14 @@
       <form id="lg-form" class="lg-form" autocomplete="off">
         <label class="fr-find lg-field"><i class="fa-solid fa-user"></i><input id="lg-user" placeholder="Slapyvardis" maxlength="16" spellcheck="false" autocomplete="username"></label>
         <label class="fr-find lg-field"><i class="fa-solid fa-lock"></i><input id="lg-pass" type="password" placeholder="Slaptažodis" maxlength="128" autocomplete="current-password"></label>
+        <label class="fr-find lg-field hidden" id="lg-pass2-wrap"><i class="fa-solid fa-lock"></i><input id="lg-pass2" type="password" placeholder="Pakartok slaptažodį" maxlength="128" autocomplete="new-password"></label>
         <div id="lg-error" class="lg-error"></div>
         <button id="lg-submit" class="lg-submit" type="submit">Prisijungti</button>
       </form>
+      <p class="lg-swap">
+        <span id="lg-swap-text">Neturi paskyros?</span>
+        <button id="lg-swap" type="button">Registruotis</button>
+      </p>
       <p class="lg-note"><i class="fa-solid fa-shield-halved"></i> Saugus prisijungimas per mctema.lt</p>
       <p class="lg-joke"><b>BETA</b> · Jeigu radai bug'ą - tai feature. <em>- ただし</em></p>
       <div class="lg-socials">

@@ -15,6 +15,10 @@
   --rail: 76px; --top: 48px; --friends-w: 300px; --r: 12px;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
+/* Chromium leaves buttons on the default arrow, so anything clickable has to
+   say so once here rather than in every component. */
+button:not(:disabled), label.fr-find, .rl-row { cursor: pointer; }
+button:disabled { cursor: default; }
 html, body { height: 100%; }
 body { background: var(--bg); color: var(--ink); font-family: 'Poppins', sans-serif;
   font-size: 14px; overflow: hidden; user-select: none; -webkit-font-smoothing: antialiased; }
@@ -332,36 +336,87 @@ body { background: var(--bg); color: var(--ink); font-family: 'Poppins', sans-se
 .ctx-div { height: 1px; background: var(--line); margin: 5px 8px; }
 
 /* ---- relay ---- */
-.relay { display: grid; grid-template-columns: 270px 1fr; height: calc(100vh - var(--top)); }
-.rl-inbox { border-right: 1px solid var(--line); padding: 24px 14px; overflow-y: auto; }
-.rl-inbox h2 { font-size: 18px; margin: 0 4px 14px; }
+/* The relay owns its own height; only the message pane scrolls, so the page
+   behind it never grows a scrollbar of its own. */
+.relay { display: grid; grid-template-columns: 270px 1fr; height: calc(100vh - var(--top));
+  overflow: hidden; }
+/* min-width:0 or a long unbroken URL in a preview stretches the whole grid
+   column and the row's ellipsis never gets to do its job. */
+.rl-inbox { border-right: 1px solid var(--line); padding: 22px 12px; overflow-y: auto;
+  min-width: 0; }
+.rl-sect-body, .rl-row { min-width: 0; max-width: 100%; }
+.rl-inbox::-webkit-scrollbar { width: 6px; }
+.rl-inbox::-webkit-scrollbar-thumb { background: rgba(255,255,255,.09); border-radius: 6px; }
+.rl-inbox h2 { font-size: 19px; font-weight: 800; margin: 0 6px 14px; }
 .rl-search { display: flex; gap: 8px; margin-bottom: 10px; }
-.rl-new { width: 34px; height: 34px; flex-shrink: 0; background: var(--panel2); border: 1px solid var(--line);
-  border-radius: 8px; color: var(--muted); font-size: 13px; }
+/* Same icon-button family as the socials on home and the shop actions:
+   translucent panel, hairline border, teal on hover. */
+.rl-new { width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center;
+  background: rgba(13,13,16,.6); border: 1px solid var(--line2); border-radius: 10px;
+  color: var(--muted); font-size: 13px; transition: color .15s, border-color .15s, box-shadow .15s; }
+.rl-new:hover { color: var(--teal); border-color: var(--teal); box-shadow: 0 0 14px rgba(74,222,128,.22); }
 .rl-new:disabled { opacity: .55; }
-.rl-sect { padding: 12px 6px 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .8px;
-  text-transform: uppercase; color: var(--faint); }
-.rl-row { display: flex; align-items: center; gap: 10px; padding: 8px 8px; border-radius: 10px; cursor: default; }
-.rl-row:hover, .rl-row.active { background: rgba(255,255,255,.05); }
-.rl-head { width: 34px; height: 34px; border-radius: 7px; image-rendering: pixelated; flex-shrink: 0; }
+.rl-sect { display: flex; align-items: center; gap: 7px; width: 100%; padding: 13px 6px 5px;
+  background: none; border: 0; font-family: inherit; font-size: 11.5px; font-weight: 600;
+  color: var(--muted); cursor: pointer; transition: color .15s; }
+.rl-sect:hover { color: var(--ink); }
+.rl-sect i { font-size: 8px; transition: transform .18s; }
+.rl-sect.off i { transform: rotate(-90deg); }
+/* hairline running out to the right of the label, fading as it goes */
+.rl-sect::after { content: ""; flex: 1; height: 1px; margin-left: 4px;
+  background: linear-gradient(90deg, var(--line2), transparent); }
+.rl-sect-body { display: grid; gap: 1px; }
+.rl-row { display: flex; align-items: center; gap: 9px; padding: 5px 7px; border-radius: 9px;
+  cursor: pointer; transition: background .12s; }
+.rl-row:hover { background: rgba(255,255,255,.04); }
+.rl-row.active { background: rgba(255,255,255,.07); }
+.rl-av { position: relative; flex-shrink: 0; line-height: 0; }
+/* No tile behind it: the 3D render has transparent margins and any background
+   shows up as a box around the head. */
+.rl-head { width: 36px; height: 36px; image-rendering: pixelated; flex-shrink: 0;
+  object-fit: contain; }
+/* Presence and unread sit on the avatar rather than competing with the name
+   and timestamp. Grey for offline, the way every chat app does it - red would
+   read as "busy". */
+.rl-dot { position: absolute; right: -2px; bottom: -2px; width: 10px; height: 10px; border-radius: 50%;
+  background: #55555d; border: 2.5px solid #0c0c0f; }
+.rl-dot.on { background: #3ddc7f; }
+.rl-unread { position: absolute; top: -4px; left: -5px; min-width: 15px; height: 15px; padding: 0 3px;
+  border-radius: 8px; background: #e03d3d; color: #fff; font-size: 9px; font-weight: 800;
+  display: grid; place-items: center; border: 2px solid #0c0c0f; }
 .rl-meta { flex: 1; min-width: 0; }
-.rl-meta b { display: block; font-size: 12.5px; line-height: 1.3; }
-.rl-meta span { display: block; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rl-row em { font-style: normal; font-size: 10px; color: var(--faint); align-self: flex-start; margin-top: 2px; }
-.rl-unread { min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: var(--red);
-  color: #fff; font-size: 10px; font-weight: 800; display: grid; place-items: center; align-self: center; }
+.rl-top { display: flex; align-items: baseline; gap: 8px; }
+.rl-top b { flex: 1; min-width: 0; font-size: 13px; line-height: 1.3; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.rl-top em { font-style: normal; font-size: 10.5px; color: var(--muted); flex-shrink: 0; }
+.rl-meta span { display: block; font-size: 11.5px; color: #9b9ba3; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; line-height: 1.45; }
 .fr-chat:not(:disabled) { cursor: pointer; }
 .fr-chat:not(:disabled):hover { color: var(--teal); border-color: rgba(74,222,128,.5); }
-.rl-chat { display: flex; flex-direction: column; min-width: 0; }
-.rl-chat-head { display: flex; align-items: center; gap: 10px; padding: 16px 22px; border-bottom: 1px solid var(--line); }
+.rl-chat { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.rl-chat-head { display: flex; align-items: center; gap: 14px; padding: 14px 20px;
+  border-bottom: 1px solid var(--line); }
+.rl-chat-head .rl-meta { flex: 0 1 auto; max-width: 220px; }
+/* search sits in the middle of the header, the way the reference does it */
+.rl-find { flex: 1; max-width: 420px; margin: 0 auto; display: flex; align-items: center; gap: 9px;
+  background: rgba(255,255,255,.03); border: 1px solid var(--line); border-radius: 10px;
+  padding: 8px 13px; color: var(--faint); font-size: 11.5px; }
+.rl-find:focus-within { border-color: var(--line2); }
+.rl-find input { flex: 1; background: none; border: 0; outline: none; color: var(--ink);
+  font-family: inherit; font-size: 12px; }
+.rl-find input::placeholder { color: var(--faint); }
+.rl-gacts { margin-left: 0; display: flex; gap: 6px; }
+.rl-ic.on { color: var(--teal); border-color: rgba(74,222,128,.45); }
+.rl-sect.plain { cursor: default; padding-left: 6px; }
+.rl-sect.plain:hover { color: var(--muted); }
 .rl-icons { margin-left: auto; display: flex; gap: 6px; }
 .rl-ic { width: 32px; height: 32px; background: none; border: 1px solid var(--line); border-radius: 8px;
   color: var(--muted); font-size: 12px; }
 .rl-ic:disabled { opacity: .55; }
-.rl-msgs { flex: 1; overflow-y: auto; padding: 20px 22px; display: flex; flex-direction: column; gap: 4px; }
-.bub { max-width: 46%; align-self: flex-start; background: #1b1b20; border-radius: 16px;
-  padding: 9px 14px; font-size: 13px; }
-.bub.mine { align-self: flex-end; background: linear-gradient(135deg, var(--purple2), var(--purple)); color: #fff; }
+.rl-msgs { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 20px 22px;
+  display: flex; flex-direction: column; gap: 4px; }
+.rl-msgs::-webkit-scrollbar { width: 8px; }
+.rl-msgs::-webkit-scrollbar-thumb { background: rgba(255,255,255,.10); border-radius: 8px; }
 .rl-date { display: flex; align-items: center; gap: 12px; margin: 14px 0; color: var(--faint); font-size: 11px; }
 .rl-date::before, .rl-date::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .rl-typing { font-size: 11px; color: var(--faint); margin-top: 8px; }
@@ -369,14 +424,12 @@ body { background: var(--bg); color: var(--ink); font-family: 'Poppins', sans-se
   background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 6px 8px 6px 16px; }
 .rl-input .rl-ic:not(:disabled) { cursor: pointer; }
 .rl-input .rl-ic:not(:disabled):hover { color: var(--ink); border-color: var(--line2); }
-.bub { white-space: pre-wrap; }
 .rl-ta { flex: 1; background: none; border: 0; outline: none; color: var(--ink);
   font-family: inherit; font-size: 13px; line-height: 1.45; resize: none;
   max-height: 120px; padding: 8px 0; }
 .rl-ta::placeholder { color: var(--faint); }
 .rl-input { align-items: flex-end; }
-.msg-img { max-width: 46%; align-self: flex-start; margin: 4px 0; }
-.msg-img.mine { align-self: flex-end; }
+.msg-img { max-width: 420px; margin: 5px 0 2px; }
 .mi-frame { position: relative; border-radius: 12px; overflow: hidden;
   background: rgba(255,255,255,.04); border: 1px solid var(--line); }
 .mi-frame img { display: block; max-width: 100%; max-height: 230px; object-fit: contain;
@@ -388,9 +441,14 @@ body { background: var(--bg); color: var(--ink); font-family: 'Poppins', sans-se
   background: rgba(10,10,12,.65); backdrop-filter: blur(3px); color: #fff;
   font-size: 11px; cursor: pointer; }
 .mi-tool:hover { background: rgba(10,10,12,.85); }
+.msg-img { min-width: 0; }
 .msg-img figcaption { display: flex; gap: 8px; margin-top: 4px; font-size: 10px;
-  color: var(--faint); }
-.msg-img figcaption em { font-style: normal; }
+  color: var(--faint); min-width: 0; max-width: 100%; }
+.msg-img figcaption span { flex-shrink: 0; }
+/* A long upload name used to widen the whole pane and add a horizontal
+   scrollbar; it truncates instead. */
+.msg-img figcaption em { font-style: normal; min-width: 0; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
 .emoji-pop { position: absolute; bottom: 50px; right: 8px; display: grid; grid-template-columns: repeat(8, 1fr);
   gap: 2px; background: #141418; border: 1px solid var(--line2); border-radius: 12px; padding: 8px;
   box-shadow: 0 14px 34px rgba(0,0,0,.6); }
@@ -450,62 +508,165 @@ body { background: var(--bg); color: var(--ink); font-family: 'Poppins', sans-se
 
 /* ---- locker ---- */
 .locker { padding: 26px 34px; }
-.lk-top { display: grid; grid-template-columns: 300px 1fr; gap: 34px; margin-top: 8px; }
+/* Three columns across the top - the skin, the drop zone, then the capes -
+   and each section's arrows sit on the right of its own label. */
+.lk-top { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 34px; margin-top: 8px; }
+.lk-col { min-width: 0; }
+.sect-head { display: flex; align-items: center; gap: 12px; }
+.sect-head .sect-label { flex: 1; min-width: 0; }
+/* The hairline that runs from the label out to the arrows, as in the design. */
+.sect-head .sect-label::after { content: ''; display: inline-block; vertical-align: middle;
+  height: 1px; width: calc(100% - 1ch); margin-left: 12px; background: var(--line); }
+.sect-nav { display: flex; gap: 6px; flex: none; }
+.sect-nav button { width: 22px; height: 22px; border: 0; border-radius: 6px; background: transparent;
+  color: var(--faint); font-size: 11px; transition: color .15s, background .15s; }
+.sect-nav button:hover { color: var(--ink); background: rgba(255,255,255,.06); }
+
 .lk-viewer { position: relative; border: 1px solid rgba(34,197,94,.4); border-radius: 14px;
   background: radial-gradient(60% 50% at 50% 30%, #101f16, #0d0d10); height: 420px;
   display: grid; place-items: center; overflow: hidden; }
 .lk-viewer canvas { cursor: grab; }
 .lk-viewer canvas:active { cursor: grabbing; }
 .lk-hint { position: absolute; color: var(--faint); font-size: 12px; pointer-events: none; }
+.lk-vbtn { position: absolute; bottom: 10px; width: 26px; height: 26px; border: 0; border-radius: 8px;
+  background: rgba(0,0,0,.45); color: var(--faint); font-size: 11px; transition: color .15s, background .15s; }
+.lk-vbtn:hover { color: var(--ink); background: rgba(0,0,0,.7); }
+.lk-vbtn.on { color: var(--green); }
+.lk-vbtn.rot { left: 10px; }
+.lk-vbtn.walk { right: 10px; }
+
 .lk-drop { display: grid; place-items: center; gap: 6px; height: 110px; border: 1.5px dashed var(--line2);
   border-radius: 12px; color: var(--faint); font-size: 12px; cursor: pointer; transition: border-color .15s, color .15s; }
 .lk-drop.over, .lk-drop:hover { border-color: var(--purple); color: var(--muted); }
 .lk-drop i { font-size: 18px; }
-.lk-capes { display: flex; gap: 10px; }
-.cape { width: 52px; height: 78px; border-radius: 8px; border: 1px solid var(--line);
-  background: linear-gradient(180deg, #f9a8d4, #ec4899); opacity: .9; }
-.cape.c2 { background: linear-gradient(180deg, #166534, #22c55e); }
-.cape.c3 { background: linear-gradient(180deg, #3b0764, #a06bfa); }
-.cape.c4 { background: linear-gradient(180deg, #a16207, #facc15); }
-.lk-note { margin-top: 14px; font-size: 11.5px; color: var(--faint); }
-.lk-row { display: flex; gap: 12px; flex-wrap: wrap; min-height: 60px; }
+
+/* Cape tiles show the front of the cape straight off the sheet, so an animated
+   one is the same tile with its background stepped a frame at a time. Two rows
+   flowing sideways: enough to see the whole set without a wall of thumbnails. */
+.lk-capes { display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, auto);
+  gap: 16px 14px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none;
+  justify-content: start; }
+.lk-capes::-webkit-scrollbar { display: none; }
+.cape-cell { display: grid; gap: 7px; justify-items: center; width: 88px; cursor: pointer; }
+.cape { position: relative; width: 80px; height: 128px; border-radius: 10px;
+  border: 1px solid var(--line); background-repeat: no-repeat; background-color: #0d0d10;
+  image-rendering: pixelated; transition: border-color .15s, transform .15s, box-shadow .15s; }
+.cape-cell:hover .cape { border-color: var(--line2); transform: translateY(-3px); }
+.cape-cell.on .cape { border-color: var(--purple); box-shadow: 0 0 0 1px var(--purple), 0 10px 24px rgba(0,0,0,.45); }
+.cape-name { font-size: 11px; color: var(--faint); max-width: 88px; text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color .15s; }
+.cape-cell:hover .cape-name { color: var(--muted); }
+.cape-cell.on .cape-name { color: var(--ink); }
+.cape.none { display: grid; place-items: center; color: var(--faint); font-size: 20px;
+  border-style: dashed; }
+.cape-cell:hover .cape.none { color: var(--ink); }
+.cape-anim { position: absolute; left: 5px; bottom: 5px; font-size: 8px; font-weight: 700; letter-spacing: .5px;
+  padding: 2px 5px; border-radius: 4px; background: rgba(0,0,0,.65); color: var(--green); }
+/* Wing badge: lit when the cape brings its own elytra, struck through when it
+   does not - shown either way, so a missing badge is never mistaken for one
+   you failed to notice. */
+.cape-ely { position: absolute; right: 5px; bottom: 5px; display: grid; place-items: center;
+  width: 17px; height: 17px; border-radius: 5px; font-size: 8px;
+  background: rgba(0,0,0,.65); color: #6b7280; }
+.cape-ely.yes { color: var(--green); }
+.cape-ely:not(.yes)::after { content: ''; position: absolute; left: 2px; right: 2px; top: 50%;
+  height: 1px; background: #9ca3af; transform: rotate(-45deg); }
+.lk-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+/* Chips rather than loose grey text: the key to the badges is the one thing
+   here people actually need to read. */
+.lk-legend span { display: inline-flex; align-items: center; gap: 7px;
+  font-size: 12px; color: var(--muted); background: rgba(255,255,255,.045);
+  border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; }
+.lk-legend i { font-size: 11px; color: #9ca3af; }
+.lk-legend i.on { color: var(--green); }
+.lk-legend b { font-size: 9.5px; font-weight: 800; letter-spacing: .5px; color: var(--green); }
+
+.lk-wip { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 8px 11px;
+  border-radius: 9px; font-size: 11px; line-height: 1.45; color: #e8c07a;
+  background: rgba(217,160,60,.09); border: 1px solid rgba(217,160,60,.28); }
+.lk-wip i { font-size: 12px; flex: none; }
+/* Sits under the legend chips on a near-black panel, where --muted all but
+   disappears; this line is the one that tells you who can see your cape. */
+.lk-note { display: flex; align-items: center; gap: 8px; margin-top: 14px;
+  font-size: 12.5px; line-height: 1.5; color: #cfd2d6; }
+.lk-note i { font-size: 11px; color: var(--green); flex: none; }
+.lk-note.bad { color: var(--red); }
+.lk-row { display: flex; gap: 12px; min-height: 60px; overflow-x: auto; padding-bottom: 4px;
+  scrollbar-width: none; }
+.lk-row::-webkit-scrollbar { display: none; }
+.lk-row > * { flex: none; }
 .lk-card { position: relative; width: 130px; border: 1px solid var(--line); border-radius: 12px;
   background: var(--panel); padding: 10px; cursor: pointer; transition: border-color .15s; }
 .lk-card:hover { border-color: var(--line2); }
 .lk-card.cur { border-color: var(--purple); }
-.lk-card img { width: 100%; image-rendering: pixelated; border-radius: 6px; display: block; }
+.lk-shot { width: 100%; height: auto; image-rendering: pixelated; display: block;
+  border-radius: 8px; background: radial-gradient(65% 55% at 50% 34%, #16161c, #0e0e12); }
 .lk-cap { font-size: 11.5px; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lk-age { font-size: 10px; color: var(--faint); }
 .lk-star, .lk-del { position: absolute; top: 6px; border: 0; background: rgba(0,0,0,.55);
   color: var(--muted); width: 24px; height: 24px; border-radius: 7px; cursor: pointer; font-size: 11px; }
-.lk-star { left: 6px; }
+.lk-star { left: 6px; opacity: 0; transition: opacity .15s, color .15s; }
+.lk-card:hover .lk-star, .lk-star.on { opacity: 1; }
 .lk-star.on { color: #facc15; }
 .lk-del { right: 6px; }
 .lk-del:hover { color: var(--red); }
 .lk-none { color: var(--faint); font-size: 12px; align-self: center; }
-.lk-modal { position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,.7); display: grid; place-items: center; }
-.lk-modal-box { position: relative; display: flex; gap: 22px; background: #141418;
-  border: 1px solid var(--line2); border-radius: 16px; padding: 26px; }
-.lk-modal-prev { width: 120px; image-rendering: pixelated; border-radius: 8px; align-self: center; }
-.lk-form { display: grid; gap: 12px; width: 280px; font-size: 12px; color: var(--muted); align-content: start; }
-.lk-form input { width: 100%; margin-top: 4px; background: var(--panel2); border: 1px solid var(--line);
-  border-radius: 8px; color: var(--ink); padding: 8px 10px; font: inherit; }
-.lk-variant label { margin-right: 12px; accent-color: var(--purple); color: var(--ink); }
+.lk-modal { position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,.72);
+  display: grid; place-items: center; padding: 24px; }
+.lk-modal-box { position: relative; display: grid; gap: 18px; background: #141418;
+  border: 1px solid var(--line2); border-radius: 16px; padding: 22px 24px;
+  box-shadow: 0 30px 70px rgba(0,0,0,.6); }
+.lkm-head { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 3px 14px; }
+.lkm-head b { font-size: 15px; }
+.lkm-head span { grid-column: 1; font-size: 11px; color: var(--faint);
+  max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lk-modal-x { grid-row: 1 / span 2; align-self: start; background: none; border: 0;
+  color: var(--faint); font-size: 15px; padding: 2px 4px; transition: color .15s; }
+.lk-modal-x:hover { color: var(--ink); }
+
+/* Both models side by side: picking one is picking the model, so the preview
+   and the choice are one control rather than a preview plus a pair of radios. */
+.lkm-models { display: flex; gap: 14px; }
+.lkm-model { display: grid; padding: 0; overflow: hidden; text-align: left;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--panel2);
+  transition: border-color .15s, box-shadow .15s, background .15s; }
+.lkm-model:hover { border-color: var(--line2); }
+.lkm-model.on { border-color: var(--purple); box-shadow: 0 0 0 1px var(--purple); background: #17131f; }
+.lkm-stage { width: 150px; height: 220px; display: grid; place-items: center;
+  background: radial-gradient(60% 50% at 50% 32%, #16161c, #0d0d10); }
+.lkm-stage canvas { cursor: grab; }
+.lkm-stage canvas:active { cursor: grabbing; }
+.lkm-model-head { display: grid; gap: 1px; padding: 9px 11px 11px; border-top: 1px solid var(--line); }
+.lkm-model-head b { font-size: 12.5px; color: var(--muted); transition: color .15s; }
+.lkm-model.on .lkm-model-head b { color: var(--ink); }
+.lkm-model-head span { font-size: 10px; color: var(--faint); }
+
+.lk-form { display: grid; gap: 14px; font-size: 12px; color: var(--muted); align-content: start; }
+.lkm-field { display: grid; gap: 5px; }
+.lk-form input { width: 100%; background: var(--panel2); border: 1px solid var(--line);
+  border-radius: 8px; color: var(--ink); padding: 9px 11px; font: inherit; }
+.lk-form input:focus { outline: 0; border-color: var(--purple); }
 .lk-save { background: #15803d; border: 0; color: #fff; border-radius: 8px; padding: 9px 16px;
-  font-weight: 700; font-size: 12px; font-family: inherit; cursor: pointer; }
+  font-weight: 700; font-size: 12px; font-family: inherit; }
 .lk-save:hover { filter: brightness(1.1); }
-.lk-modal-x { position: absolute; top: 10px; right: 12px; background: none; border: 0;
-  color: var(--muted); cursor: pointer; font-size: 13px; }
 .lk-modal-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-#lkm-err { color: var(--red); font-size: 11px; }
+.lkm-err { color: var(--red); font-size: 11px; }
 
 /* ---- notifications ---- */
 .rl-on { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-left: 6px;
   background: var(--teal); box-shadow: 0 0 6px rgba(74, 222, 128, .7); vertical-align: 1px; }
-.rl-new-pop { position: absolute; left: 14px; top: 64px; z-index: 220; width: 250px; max-height: 340px;
-  overflow-y: auto; padding: 8px; border-radius: 12px; border: 1px solid var(--line);
-  background: #101b13; box-shadow: 0 14px 34px rgba(0, 0, 0, .5); }
-.rl-new-pop .rl-row { padding: 7px 8px; }
+/* Same popover family as the notification panel, rather than its own tint. */
+.rl-new-pop { position: absolute; left: 14px; top: 66px; z-index: 220; width: 262px; max-height: 340px;
+  overflow-y: auto; padding: 10px; border-radius: 14px; border: 1px solid var(--line2);
+  background: #141418; box-shadow: 0 18px 44px rgba(0,0,0,.6); animation: viewIn .16s ease both; }
+.rl-new-pop .rl-row { padding: 6px 8px; }
+.rl-newgroup { border-bottom: 1px solid var(--line); padding-bottom: 9px; margin-bottom: 3px; }
+/* game-icons.net glyph through a mask, no tile behind it - a boxed icon next
+   to unboxed avatars looked bolted on. */
+.rl-newgroup .rl-mk { width: 34px; height: 34px; flex-shrink: 0; background: var(--muted);
+  -webkit-mask: url('icons/group.svg') center / 26px no-repeat;
+  mask: url('icons/group.svg') center / 26px no-repeat; transition: background .15s; }
+.rl-newgroup:hover .rl-mk { background: var(--teal); }
 .tb-controls .tb-update { -webkit-app-region: no-drag; display: flex; align-items: center; gap: 7px;
   width: auto; margin-right: 10px; padding: 0 14px; height: 30px; border: 0; border-radius: 9px;
   cursor: pointer; font-family: inherit; font-size: 10.5px; font-weight: 800; letter-spacing: 1px;
@@ -825,6 +986,169 @@ body { background: var(--bg); color: var(--ink); font-family: 'Poppins', sans-se
 .pg-sub { color: var(--muted); font-size: 12.5px; margin: 6px 0 18px; }
 .sect-label { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: var(--ink); margin: 18px 0 10px; }
 
+/* Chrome stays unselectable, but message text is text - you should be able to
+   drag over it and copy it. */
+.dm-line, .dm-body .bub-body, .dm-head, .msg-img figcaption,
+.lc-body b, .lc-desc, .lc-site { user-select: text; cursor: text; }
+.dm-line .msg-link, .dm-line .mention { cursor: pointer; }
+
+/* ---- messages: Discord-style rows, no bubbles ---- */
+.dm-msg { display: flex; gap: 12px; padding: 2px 8px 2px 4px; border-radius: 8px;
+  position: relative; }
+.dm-msg:not(.cont) { margin-top: 12px; }
+.dm-msg:hover { background: rgba(255,255,255,.03); }
+/* a message naming you gets the same treatment Discord gives a mention */
+.dm-msg.hit { background: rgba(74,222,128,.07); box-shadow: inset 2px 0 0 var(--teal); }
+.dm-msg.flash { animation: bubFlash 0.9s ease; }
+@keyframes bubFlash { 0%, 100% { background: rgba(255,255,255,.03); }
+  30% { background: rgba(74,222,128,.16); } }
+/* One column for everyone, Discord-style - only the name colour marks yours. */
+.dm-gutter { width: 40px; flex-shrink: 0; display: flex; justify-content: center; }
+.dm-av { width: 40px; height: 40px; object-fit: contain; image-rendering: pixelated;
+  cursor: pointer; }
+.dm-hovertime { font-size: 9.5px; color: var(--faint); opacity: 0; line-height: 20px; }
+.dm-msg:hover .dm-hovertime { opacity: 1; }
+.dm-body { flex: 1; min-width: 0; }
+.dm-head { display: flex; align-items: baseline; gap: 9px; }
+.dm-name { font-size: 13.5px; font-weight: 700; color: #f2f2f4; }
+.dm-name.me { color: var(--teal); }
+.dm-head em { font-style: normal; font-size: 10px; color: var(--faint); }
+.dm-line { font-size: 13.5px; line-height: 1.5; color: #dcdce2; white-space: pre-wrap;
+  word-break: break-word; }
+.dm-edited { font-style: normal; font-size: 9.5px; color: var(--faint); margin-left: 6px; }
+.dm-reply { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; cursor: pointer;
+  font-size: 11px; color: var(--muted); }
+.dm-reply i { font-size: 9px; color: var(--faint); transform: scaleY(-1); }
+.dm-reply b { color: var(--teal); font-weight: 600; }
+.dm-reply span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dm-reply:hover span { color: var(--ink); }
+.dm-acts { position: absolute; top: -10px; right: 10px; display: flex; gap: 2px; opacity: 0;
+  padding: 3px; border-radius: 8px; background: #16161b; border: 1px solid var(--line2);
+  transition: opacity .12s; }
+.dm-msg:hover .dm-acts { opacity: 1; }
+.dm-acts button { width: 26px; height: 26px; border: 0; border-radius: 6px; background: none;
+  color: var(--muted); font-size: 11px; }
+.dm-acts button:hover { color: var(--ink); background: rgba(255,255,255,.07); }
+.dm-acts button.danger:hover { color: var(--red); }
+.rl-seen { display: flex; align-items: center; gap: 5px; margin-top: 3px; font-size: 10.5px;
+  font-weight: 600; color: #a9b3ad; }
+.rl-seen i { font-size: 9.5px; color: var(--teal); }
+.rl-context { display: flex; align-items: center; gap: 10px; margin: 0 22px -4px; padding: 8px 12px;
+  background: rgba(255,255,255,.04); border-left: 2px solid var(--teal);
+  border-radius: 8px 8px 0 0; }
+.rl-context-txt { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.rl-context-txt b { font-size: 11px; color: var(--teal); }
+.rl-context-txt span { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; }
+.rl-context-x { background: none; border: 0; color: var(--faint); font-size: 12px; }
+.rl-context-x:hover { color: var(--ink); }
+.rl-typing { margin: 0 22px; }
+.rl-sub-ic { font-size: 9px; margin-right: 5px; color: var(--faint); }
+
+.rl-chat { position: relative; }
+.rl-drop { position: absolute; inset: 10px; z-index: 40; display: grid; place-items: center;
+  align-content: center; gap: 10px; border: 2px dashed rgba(74,222,128,.5); border-radius: 14px;
+  background: rgba(10,14,11,.82); backdrop-filter: blur(2px); pointer-events: none; }
+.rl-drop i { font-size: 26px; color: var(--teal); }
+.rl-drop span { font-size: 12.5px; color: var(--ink); font-weight: 600; }
+
+/* ---- relay groups and pins ---- */
+/* Member heads tiled into one avatar: two across for a pair, a 2x2 grid from
+   three up, so a group is recognisable by who is in it. */
+.rl-gav { width: 34px; height: 34px; flex-shrink: 0; border-radius: 8px; overflow: hidden;
+  display: grid; gap: 1px; background: rgba(255,255,255,.05); place-items: center;
+  color: var(--teal); font-size: 13px; }
+.rl-gav img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; display: block; }
+.rl-gav.n1 { grid-template-columns: 1fr; }
+.rl-gav.n2 { grid-template-columns: 1fr 1fr; }
+.rl-gav.n3, .rl-gav.n4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.rl-gav.n3 img:first-child { grid-row: span 2; }
+.rl-gav.big { width: 40px; height: 40px; }
+.rl-gav.custom img { object-fit: cover; image-rendering: auto; }
+/* link previews - metadata and thumbnail both come from mctema.lt */
+.link-card { display: flex; gap: 12px; max-width: 420px; margin-top: 6px; padding: 10px 12px;
+  border-radius: 10px; border: 1px solid var(--line2); border-left: 3px solid var(--teal);
+  background: rgba(255,255,255,.03); color: inherit; font-family: inherit; text-align: left;
+  transition: background .15s; }
+.link-card:hover { background: rgba(255,255,255,.06); }
+.lc-body { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.lc-site { font-size: 10px; color: var(--faint); text-transform: uppercase; letter-spacing: .5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lc-body b { font-size: 12.5px; color: var(--teal); line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.lc-desc { font-size: 11px; color: var(--muted); line-height: 1.45;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.lc-desc:empty { display: none; }
+.lc-thumb { width: 64px; height: 64px; flex-shrink: 0; order: 2; border-radius: 8px;
+  object-fit: cover; background: rgba(255,255,255,.04); }
+/* video and audio links: a big poster with a play badge, opens in the browser */
+.link-card.media { flex-direction: column; max-width: 440px; }
+.lc-stage { position: relative; width: 100%; border-radius: 8px; overflow: hidden;
+  background: #000; cursor: pointer; }
+.link-card.video .lc-stage, .link-card.media .lc-stage { aspect-ratio: 16 / 9; }
+.link-card.audio .lc-stage { aspect-ratio: auto; height: 152px; }
+.link-card.vertical .lc-stage { aspect-ratio: 9 / 16; max-height: 520px; margin: 0 auto; }
+.lc-poster { width: 100%; height: 100%; object-fit: cover; display: block; }
+.lc-play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  display: grid; place-items: center;
+  width: 54px; height: 54px; border-radius: 50%; color: #06280f; font-size: 17px;
+  background: rgba(74,222,128,.92); box-shadow: 0 8px 26px rgba(0,0,0,.5); }
+.lc-stage:hover .lc-play { background: var(--teal); transform: translate(-50%, -50%) scale(1.06); }
+
+.msg-link { color: #6fb8ff; cursor: pointer; word-break: break-all; }
+.msg-link:hover { text-decoration: underline; }
+
+/* mentions */
+.mention { color: var(--teal); font-weight: 600; }
+.mention.me { background: rgba(74,222,128,.18); border-radius: 5px; padding: 0 4px; }
+.rl-mention-pop { position: absolute; left: 12px; right: 12px; bottom: calc(100% + 8px);
+  max-height: 210px; overflow-y: auto; padding: 6px; border-radius: 12px;
+  border: 1px solid var(--line2); background: #141418; box-shadow: 0 18px 44px rgba(0,0,0,.6);
+  display: grid; gap: 2px; z-index: 40; }
+.rl-mention-row { display: flex; align-items: center; gap: 9px; padding: 6px 8px; border: 0;
+  border-radius: 8px; background: none; color: var(--ink); font-family: inherit; font-size: 12.5px;
+  text-align: left; }
+.rl-mention-row img { width: 24px; height: 24px; image-rendering: pixelated; object-fit: contain; }
+.rl-mention-row:hover, .rl-mention-row.on { background: rgba(255,255,255,.06); }
+
+.rl-icon-row { display: flex; align-items: center; gap: 14px; }
+.rl-icon-prev { width: 52px; height: 52px; flex-shrink: 0; border-radius: 11px; overflow: hidden;
+  display: grid; gap: 1px; background: rgba(255,255,255,.05); }
+.rl-icon-prev img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Only on hover, even when pinned: the Prisegta section already says which
+   conversations are pinned, so a permanent glyph is just clutter. */
+.rl-pin { opacity: 0; background: none; border: 0; color: var(--faint); font-size: 10px;
+  cursor: pointer; padding: 4px 2px; transition: color .15s, opacity .15s; }
+.rl-row:hover .rl-pin { opacity: .8; }
+.rl-pin:hover { color: var(--ink); opacity: 1; }
+.rl-pin.on { color: var(--teal); transform: rotate(-35deg); }
+.rl-gacts { margin-left: auto; display: flex; gap: 6px; }
+.rl-ic.danger:hover { color: var(--red); }
+.rl-who { font-size: 10.5px; color: var(--faint); margin: 6px 0 -4px 2px; }
+.rl-newgroup { border-bottom: 1px solid var(--line); }
+.rl-modal { position: fixed; inset: 0; background: rgba(4,4,6,.6); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center; z-index: 200; }
+.rl-modal-box { width: 340px; background: #0e1013; border: 1px solid var(--line2);
+  border-radius: 15px; padding: 20px; display: grid; gap: 12px;
+  box-shadow: 0 30px 70px -20px rgba(0,0,0,.9); animation: viewIn .2s ease both; }
+.rl-modal-title { font-size: 15px; font-weight: 800; }
+.rl-modal-name { background: rgba(10,10,12,.6); border: 1px solid var(--line2); border-radius: 9px;
+  color: var(--ink); font-family: inherit; font-size: 13px; padding: 9px 12px; outline: none; }
+.rl-modal-name:focus { border-color: var(--teal); }
+.rl-modal-list { max-height: 240px; overflow-y: auto; display: grid; gap: 4px; }
+.rl-modal-row { display: flex; align-items: center; gap: 10px; background: none; border: 1px solid transparent;
+  border-radius: 9px; padding: 6px 8px; cursor: pointer; font-family: inherit; color: var(--ink);
+  font-size: 13px; text-align: left; }
+.rl-modal-row:hover { background: rgba(255,255,255,.04); }
+.rl-modal-row.on { border-color: var(--teal); background: rgba(74,222,128,.08); }
+.rl-modal-row img { width: 26px; height: 26px; border-radius: 7px; image-rendering: pixelated; }
+.rl-modal-acts { display: flex; justify-content: flex-end; gap: 10px; }
+.rl-modal-acts button { font-family: inherit; font-size: 12px; font-weight: 700; border-radius: 9px;
+  padding: 9px 16px; cursor: pointer; background: none; border: 1px solid var(--line2); color: var(--muted); }
+.rl-modal-acts button:hover { color: var(--ink); }
+.rl-modal-acts .primary { background: linear-gradient(180deg, var(--teal), var(--teal2)); border: 0;
+  color: #06280f; }
+
 /* ---- shop ---- */
 /* Follows the home view's language: hero art band with ambient particles, floating
    items on glow pads, gold for auksiniai, teal for actions. No bordered card grids. */
@@ -985,3 +1309,10 @@ body { background: var(--bg); color: var(--ink); font-family: 'Poppins', sans-se
 .cr-link { background: none; border: 0; color: var(--muted); font-family: inherit;
   font-size: 10.5px; text-decoration: underline; cursor: pointer; padding: 0; }
 .cr-link:hover { color: var(--ink); }
+
+/* Registration lives on the same card as login, so the swap is a line of text
+   rather than a second screen. */
+.lg-swap { margin-top: 12px; font-size: 12px; color: var(--faint); text-align: center; }
+.lg-swap button { background: none; border: 0; padding: 0 0 0 5px; font: inherit;
+  font-weight: 700; color: var(--green); text-decoration: underline; text-underline-offset: 2px; }
+.lg-swap button:hover { filter: brightness(1.15); }

@@ -121,7 +121,7 @@
       }
     } catch {}
   }
-  refreshDiscord();
+  window.ui.bootTask(refreshDiscord());
   setInterval(refreshDiscord, 60000);
 
   // The DABAR TRANSLIUOJA strip stays hidden until a real streams API exists
