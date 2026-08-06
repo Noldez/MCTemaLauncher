@@ -434,7 +434,7 @@ ipcMain.handle('chat:sendImage', async (_e, p) => {
 
 const MOD_HASHES = {
   'fabric-api.jar': 'bdff7fd7e220085cfad2ff9b1f40dde6534ae0b96cf378f97a374bc54cb9ed0f',
-  'mctemaclient.jar': '900f94bc7a77d0f06f75675fcec2d058f1710414a2b16be725ea50d9b2ac5e76',
+  'mctemaclient.jar': '8e2b59c10c2a4ff0dd30db4ddbac1207c69c8230d811c938f9d3e961f2081957',
 };
 
 const resolveJava = () => resolveBundledJava({
