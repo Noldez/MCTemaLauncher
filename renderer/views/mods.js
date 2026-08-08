@@ -10,7 +10,7 @@
 
   const fmtSize = (b) => b ? `${(b / 1048576).toFixed(2)}MB` : '';
 
-  function row({ icon, faIcon, name, author, discord, version, size, locked, enabled, installed, available, id }) {
+  function row({ icon, faIcon, name, author, discord, note, version, size, locked, enabled, installed, available, id }) {
     const r = el('div', 'modrow');
     const ic = el('span', 'mr-ic');
     if (icon) {
@@ -25,6 +25,7 @@
     const by = el('span', null, `Sukūrė ${author}`);
     if (discord) by.title = `Discord: ${discord}`;
     meta.append(el('b', null, name), by);
+    if (note) meta.append(el('span', 'mr-note', note));
     const info = el('span', 'mr-info', [version ? `v${version}` : '', fmtSize(size)].filter(Boolean).join('  ·  '));
     r.append(ic, meta, info);
 
@@ -73,15 +74,24 @@
 
     const sugg = $('mods-sugg');
     sugg.textContent = '';
-    opt.filter((m) => !m.third && !m.installed).forEach((m) => {
-      const c = el('button', 'sugg' + (busy.has(m.id) ? ' busy' : ''));
+    // The whole catalog stays pinned here - an installed recommendation shows
+    // a check instead of vanishing, so the row keeps meaning "we vouch for
+    // these" rather than "you are missing these".
+    opt.filter((m) => !m.third).forEach((m) => {
+      const on = m.installed && m.enabled;
+      const c = el('button', 'sugg' + (busy.has(m.id) ? ' busy' : '') + (on ? ' got' : ''));
       const ic = el('span', 'sugg-ic');
       if (m.icon) { const img = el('img'); img.src = m.icon; ic.append(img); }
       else ic.innerHTML = '<i class="fa-solid fa-cube"></i>';
-      c.append(ic, el('b', null, m.name));
-      c.append(el('i', busy.has(m.id) ? 'fa-solid fa-spinner fa-spin sugg-plus' : 'fa-solid fa-plus sugg-plus'));
-      c.title = m.available ? `Įdiegti ${m.name}` : 'Nepasiekiamas';
-      c.disabled = !m.available || busy.has(m.id);
+      const txt = el('span', 'sugg-txt');
+      txt.append(el('b', null, m.name));
+      if (m.note) txt.append(el('span', 'sugg-note', m.note));
+      c.append(ic, txt);
+      c.append(el('i', busy.has(m.id)
+        ? 'fa-solid fa-spinner fa-spin sugg-plus'
+        : (on ? 'fa-solid fa-check sugg-plus' : 'fa-solid fa-plus sugg-plus')));
+      c.title = on ? 'Įdiegtas' : (m.available ? `Įdiegti ${m.name}` + (m.desc ? ` - ${m.desc}` : '') : 'Nepasiekiamas');
+      c.disabled = on || !m.available || busy.has(m.id);
       c.addEventListener('click', async () => {
         busy.add(m.id);
         load();
@@ -92,7 +102,6 @@
       });
       sugg.append(c);
     });
-    if (!sugg.children.length) sugg.append(el('span', 'sugg-none', 'Visi įdiegti'));
 
     const box = $('mods-installed');
     box.textContent = '';
@@ -177,6 +186,78 @@
   });
   $('mods-refresh').addEventListener('click', load);
   $('mods-folder').addEventListener('click', () => window.api.openFolder());
-  document.querySelector('.rail-btn[data-view="mods"]').addEventListener('click', load);
+
+  // Shader packs: same page, own little world - the folder is the truth, the
+  // launcher is just a nicer way in and out of it.
+  let sq = '';
+  let shTimer = null;
+
+  async function loadShaders() {
+    const packs = await window.api.listShaders();
+    const box = $('shd-installed');
+    box.textContent = '';
+    packs.forEach((p) => {
+      const r = el('div', 'modrow');
+      const ic = el('span', 'mr-ic');
+      if (p.icon) { const img = el('img'); img.src = p.icon; ic.append(img); }
+      else ic.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
+      const meta = el('div', 'mr-meta');
+      meta.append(el('b', null, p.name), el('span', null, p.author ? `Sukūrė ${p.author}` : 'Iš aplanko'));
+      const info = el('span', 'mr-info', [p.version ? `v${p.version}` : '', fmtSize(p.size)].filter(Boolean).join('  ·  '));
+      const del = el('button', 'mr-del');
+      del.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+      del.title = 'Pašalinti shaderį';
+      del.addEventListener('click', async () => { await window.api.removeShader(p.file); loadShaders(); });
+      r.append(ic, meta, info, del);
+      box.append(r);
+    });
+    if (!box.children.length) box.append(el('div', 'mr-empty', 'Shaderių dar nėra - susirask per paiešką dešinėje.'));
+  }
+
+  async function searchShaders() {
+    const box = $('shd-mr');
+    if (sq.length < 2) { box.textContent = ''; return; }
+    const hits = await window.api.searchShaders(sq);
+    box.textContent = '';
+    if (!hits.length) return;
+    box.append(el('div', 'mr-src', 'Modrinth shaderiai'));
+    hits.forEach((h) => {
+      const r = el('div', 'modrow');
+      const ic = el('span', 'mr-ic');
+      if (h.icon) { const img = el('img'); img.src = h.icon; ic.append(img); }
+      else ic.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
+      const meta = el('div', 'mr-meta');
+      meta.append(el('b', null, h.name), el('span', null, `Sukūrė ${h.author} · ${h.downloads.toLocaleString('lt-LT')} atsisiuntimų`));
+      const add = el('button', 'mr-add');
+      add.innerHTML = '<i class="fa-solid fa-plus"></i>';
+      add.title = 'Pridėti (Iris, 1.21.11)';
+      add.addEventListener('click', async () => {
+        add.disabled = true;
+        add.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        const res = await window.api.addShader({ slug: h.slug, name: h.name, author: h.author, icon: h.icon });
+        if (!res.ok) {
+          document.dispatchEvent(new CustomEvent('notify', { detail: { text: `${h.name}: ${res.error}`, kind: 'error' } }));
+          add.disabled = false;
+          add.innerHTML = '<i class="fa-solid fa-plus"></i>';
+          return;
+        }
+        if (res.warn) document.dispatchEvent(new CustomEvent('notify', { detail: { text: res.warn, kind: 'error' } }));
+        loadShaders();
+        load();
+      });
+      r.append(ic, meta, add);
+      box.append(r);
+    });
+  }
+
+  $('shd-q').addEventListener('input', (e) => {
+    sq = e.target.value.trim().toLowerCase();
+    clearTimeout(shTimer);
+    shTimer = setTimeout(searchShaders, 350);
+  });
+  $('shd-folder').addEventListener('click', () => window.api.openShaderFolder());
+
+  document.querySelector('.rail-btn[data-view="mods"]').addEventListener('click', () => { load(); loadShaders(); });
   load();
+  loadShaders();
 })();

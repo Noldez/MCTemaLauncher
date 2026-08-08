@@ -434,7 +434,7 @@ ipcMain.handle('chat:sendImage', async (_e, p) => {
 
 const MOD_HASHES = {
   'fabric-api.jar': 'bdff7fd7e220085cfad2ff9b1f40dde6534ae0b96cf378f97a374bc54cb9ed0f',
-  'mctemaclient.jar': '8e2b59c10c2a4ff0dd30db4ddbac1207c69c8230d811c938f9d3e961f2081957',
+  'mctemaclient.jar': 'fe7ec97a13784c3bf0951c13ed1a9ffbb4dfabeb2c28c2541924b87ef8fd6bc0',
 };
 
 const resolveJava = () => resolveBundledJava({
@@ -1046,6 +1046,7 @@ const OMOD_CATALOG = [
   { id: 'entityculling', name: 'Entity Culling', author: 'tr7zw', desc: 'Nerodo nematomu esybiu - daugiau FPS' },
   { id: 'dynamic-fps', name: 'Dynamic FPS', author: 'juliand665', desc: 'Mazina apkrova kai langas neaktyvus' },
   { id: 'iris', name: 'Iris Shaders', author: 'coderbot', desc: 'Shaderiu palaikymas (OptiFine formatas)' },
+  { id: 'simple-voice-chat', name: 'Simple Voice Chat', author: 'henkelmax', desc: 'Balso pokalbiai zaidime - grupes, whisper', note: 'Serverio integracija' },
 ];
 let omodInfoCache = { at: 0, data: {} };
 const SODIUM_PROJECT_ID = 'AANobbMI';
@@ -1139,7 +1140,7 @@ ipcMain.handle('omods:list', async () => {
     const st = (cfg.optionalMods || []).find((x) => x.id === m.id);
     const i = info[m.id] || {};
     return {
-      id: m.id, name: m.name, author: m.author, desc: m.desc,
+      id: m.id, name: m.name, author: m.author, desc: m.desc, note: m.note || null,
       icon: i.icon || null,
       version: st ? st.version : (i.version || null),
       size: st ? st.size : (i.size || null),
@@ -1233,9 +1234,7 @@ ipcMain.handle('omods:addLocal', (_e, payload) => {
   return { ok: true };
 });
 
-ipcMain.handle('omods:toggle', async (_e, payload) => {
-  const id = String((payload && payload.id) || '');
-  const enabled = !!(payload && payload.enabled);
+async function setOmodEnabled(id, enabled) {
   const m = OMOD_CATALOG.find((x) => x.id === id);
   const cfg = loadConfig();
   let st = (cfg.optionalMods || []).find((x) => x.id === id);
@@ -1278,7 +1277,10 @@ ipcMain.handle('omods:toggle', async (_e, payload) => {
     optionalMods: (cfg.optionalMods || []).map((x) => x.id === id ? { ...x, enabled } : x),
   });
   return { ok: true };
-});
+}
+
+ipcMain.handle('omods:toggle', (_e, payload) =>
+  setOmodEnabled(String((payload && payload.id) || ''), !!(payload && payload.enabled)));
 
 ipcMain.handle('omods:remove', (_e, id) => {
   const cfg = loadConfig();
@@ -1288,6 +1290,101 @@ ipcMain.handle('omods:remove', (_e, id) => {
     saveConfig({ ...cfg, optionalMods: (cfg.optionalMods || []).filter((x) => x.id !== String(id)) });
   }
   return { ok: true };
+});
+
+// Shader packs live in the game's shaderpacks folder, which stageMods never
+// touches, so they survive every launch. They are data for Iris, not code,
+// but the download is still hash-verified like a mod: a zip from a spoofed
+// response has no business in the game directory.
+const shaderDir = path.join(gameDir, 'shaderpacks');
+
+ipcMain.handle('shaders:list', () => {
+  const cfg = loadConfig();
+  let files = [];
+  // The folder itself is the source of truth, so packs dropped in by hand
+  // show up in the launcher too instead of only living in the folder.
+  try { files = fs.readdirSync(shaderDir).filter((f) => f.toLowerCase().endsWith('.zip')); } catch {}
+  return files.map((file) => {
+    const st = (cfg.shaderPacks || []).find((x) => x.file === file);
+    let size = 0;
+    try { size = fs.statSync(path.join(shaderDir, file)).size; } catch {}
+    return {
+      file,
+      name: st ? st.name : file.replace(/\.zip$/i, ''),
+      author: st ? st.author : null,
+      icon: st ? st.icon : null,
+      version: st ? st.version : null,
+      size,
+    };
+  });
+});
+
+ipcMain.handle('shaders:search', async (_e, query) => {
+  const q = String(query || '').trim().slice(0, 48);
+  if (q.length < 2) return [];
+  try {
+    const facets = encodeURIComponent('[["versions:1.21.11"],["project_type:shader"],["categories:iris"]]');
+    const r = await fetch(`https://api.modrinth.com/v2/search?query=${encodeURIComponent(q)}&facets=${facets}&limit=8`,
+      { signal: AbortSignal.timeout(10000) });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return (j.hits || []).map((h) => ({
+      slug: h.slug, name: h.title, author: h.author, icon: h.icon_url || null,
+      downloads: h.downloads,
+    }));
+  } catch { return []; }
+});
+
+ipcMain.handle('shaders:add', async (_e, payload) => {
+  const slug = String((payload && payload.slug) || '').trim();
+  if (!/^[a-z0-9\-_]{2,64}$/i.test(slug)) return { ok: false, error: 'Netinkamas shaderis.' };
+  const fname = `${slug}.zip`;
+  if (fs.existsSync(path.join(shaderDir, fname))) return { ok: false, error: 'Shaderis jau pridėtas.' };
+  try {
+    const q = `https://api.modrinth.com/v2/project/${slug}/version?game_versions=%5B%221.21.11%22%5D&loaders=%5B%22iris%22%5D`;
+    const vr = await fetch(q, { signal: AbortSignal.timeout(10000) });
+    if (!vr.ok) return { ok: false, error: 'Shaderis nepasiekiamas.' };
+    const versions = await vr.json();
+    const v = versions.find((x) => x.version_type === 'release') || versions[0];
+    if (!v) return { ok: false, error: 'Nėra versijos 1.21.11 Iris.' };
+    const file = v.files.find((f) => f.primary) || v.files[0];
+    const buf = await downloadVerifiedMod(file);
+    if (!buf) return { ok: false, error: 'Atsisiuntimas nepavyko arba failas neatitinka kontrolinės sumos.' };
+    fs.mkdirSync(shaderDir, { recursive: true });
+    fs.writeFileSync(path.join(shaderDir, fname), buf);
+    const st = {
+      file: fname, source: 'modrinth',
+      name: String((payload && payload.name) || slug).slice(0, 48),
+      author: String((payload && payload.author) || 'Modrinth').slice(0, 32),
+      icon: (payload && payload.icon) || null,
+      version: v.version_number, size: buf.length,
+      sha256: crypto.createHash('sha256').update(buf).digest('hex'),
+    };
+    const cfg = loadConfig();
+    saveConfig({ ...cfg, shaderPacks: [...(cfg.shaderPacks || []).filter((x) => x.file !== fname), st] });
+    // A pack without Iris renders nothing, so the loader comes along in the
+    // same click - that is the whole point of the section.
+    const iris = await setOmodEnabled('iris', true);
+    if (!iris.ok) return { ok: true, warn: `Shaderis įdiegtas, bet Iris įjungti nepavyko: ${iris.error}` };
+    return { ok: true };
+  } catch {
+    return { ok: false, error: 'Atsisiuntimas nepavyko.' };
+  }
+});
+
+ipcMain.handle('shaders:remove', (_e, file) => {
+  const f = String(file || '');
+  if (!isPlainFileName(f) || !f.toLowerCase().endsWith('.zip')) return { ok: false, error: 'Netinkamas failas.' };
+  try { fs.rmSync(path.join(shaderDir, f), { force: true }); } catch {}
+  const cfg = loadConfig();
+  saveConfig({ ...cfg, shaderPacks: (cfg.shaderPacks || []).filter((x) => x.file !== f) });
+  return { ok: true };
+});
+
+ipcMain.handle('shaders:folder', () => {
+  fs.mkdirSync(shaderDir, { recursive: true });
+  shell.openPath(shaderDir);
+  return true;
 });
 
 let launching = false;
