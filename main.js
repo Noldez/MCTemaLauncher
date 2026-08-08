@@ -1043,7 +1043,7 @@ const optionalDir = path.join(gameDir, 'optional-mods');
 const OMOD_CATALOG = [
   { id: 'sodium', name: 'Sodium', author: 'JellySquid', desc: 'FPS optimizacija - greitesnis renderinimas' },
   { id: 'lithium', name: 'Lithium', author: 'JellySquid', desc: 'Serverio/tick optimizacija' },
-  { id: 'entityculling', name: 'Entity Culling', author: 'tr7zw', desc: 'Nerodo nematomu esybiu - daugiau FPS' },
+  { id: 'entityculling', name: 'Entity Culling', author: 'tr7zw', desc: 'Nerodo nematomu entities - daugiau FPS' },
   { id: 'dynamic-fps', name: 'Dynamic FPS', author: 'juliand665', desc: 'Mazina apkrova kai langas neaktyvus' },
   { id: 'iris', name: 'Iris Shaders', author: 'coderbot', desc: 'Shaderiu palaikymas (OptiFine formatas)' },
   { id: 'simple-voice-chat', name: 'Simple Voice Chat', author: 'henkelmax', desc: 'Balso pokalbiai zaidime - grupes, whisper', note: 'Serverio integracija' },
