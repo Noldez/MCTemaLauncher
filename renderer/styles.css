@@ -728,6 +728,10 @@ body { background: var(--bg); color: var(--ink); font-family: 'Poppins', sans-se
   font-family: inherit; color: var(--ink); transition: border-color .15s; }
 .sugg:hover:not(:disabled) { border-color: rgba(74,222,128,.5); }
 .sugg:disabled { opacity: .55; cursor: default; }
+.sugg.got { opacity: 1; border-color: rgba(74,222,128,.28); }
+.sugg-txt { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.25; }
+.sugg-note { font-size: 9.5px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase;
+  color: var(--teal); white-space: nowrap; }
 .sugg-ic { width: 22px; height: 22px; border-radius: 50%; overflow: hidden; background: var(--panel2);
   display: grid; place-items: center; color: var(--muted); font-size: 10px; }
 .sugg-ic img { width: 100%; height: 100%; object-fit: cover; }
@@ -743,6 +747,8 @@ body { background: var(--bg); color: var(--ink); font-family: 'Poppins', sans-se
 .mr-meta { flex: 1; min-width: 0; }
 .mr-meta b { display: block; font-size: 15.5px; font-weight: 700; line-height: 1.3; }
 .mr-meta span { display: block; font-size: 11.5px; color: var(--faint); }
+.mr-meta .mr-note { font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+  color: var(--teal); margin-top: 2px; }
 .mr-info { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .mr-state { font-size: 13px; font-weight: 700; color: var(--ink); margin-left: 14px; white-space: nowrap; }
 .mr-check { width: 22px; height: 22px; flex-shrink: 0; border: 1px solid var(--line2); border-radius: 6px;
@@ -759,6 +765,13 @@ body { background: var(--bg); color: var(--ink); font-family: 'Poppins', sans-se
 .mr-del:hover:not(:disabled) { background: rgba(153,27,27,.45); }
 .mr-del:disabled { opacity: .4; cursor: default; }
 .mr-empty { padding: 14px 4px; color: var(--faint); font-size: 12px; }
+.shd-head { display: flex; align-items: center; gap: 12px; margin: 26px 0 4px;
+  padding-top: 18px; border-top: 1px solid var(--line); }
+.shd-label { flex-shrink: 0; font-size: 11px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--muted); }
+.shd-label i { color: var(--teal); margin-right: 4px; font-size: 10px; }
+.shd-search { flex: 1; }
+.shd-note { font-size: 10.5px; color: var(--faint); margin: 4px 2px 12px; }
 .ms-card.drop { cursor: pointer; transition: background .15s; }
 .ms-card.drop:hover, .ms-card.drop.over { background: #14141a; }
 .ms-card.drop.over .ms-plus { border-color: var(--teal); color: var(--teal); }
