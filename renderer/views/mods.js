@@ -74,23 +74,24 @@
 
     const sugg = $('mods-sugg');
     sugg.textContent = '';
-    // The whole catalog stays pinned here - an installed recommendation shows
-    // a check instead of vanishing, so the row keeps meaning "we vouch for
-    // these" rather than "you are missing these".
+    // The whole catalog stays pinned here as a grid of tiles - an installed
+    // recommendation shows a check instead of vanishing, so the grid keeps
+    // meaning "we vouch for these" rather than "you are missing these".
     opt.filter((m) => !m.third).forEach((m) => {
       const on = m.installed && m.enabled;
       const c = el('button', 'sugg' + (busy.has(m.id) ? ' busy' : '') + (on ? ' got' : ''));
+      const head = el('div', 'sugg-head');
       const ic = el('span', 'sugg-ic');
       if (m.icon) { const img = el('img'); img.src = m.icon; ic.append(img); }
       else ic.innerHTML = '<i class="fa-solid fa-cube"></i>';
-      const txt = el('span', 'sugg-txt');
-      txt.append(el('b', null, m.name));
-      if (m.note) txt.append(el('span', 'sugg-note', m.note));
-      c.append(ic, txt);
-      c.append(el('i', busy.has(m.id)
-        ? 'fa-solid fa-spinner fa-spin sugg-plus'
-        : (on ? 'fa-solid fa-check sugg-plus' : 'fa-solid fa-plus sugg-plus')));
-      c.title = on ? 'Įdiegtas' : (m.available ? `Įdiegti ${m.name}` + (m.desc ? ` - ${m.desc}` : '') : 'Nepasiekiamas');
+      head.append(ic, el('i', (busy.has(m.id)
+        ? 'fa-solid fa-spinner fa-spin'
+        : (on ? 'fa-solid fa-check' : 'fa-solid fa-plus')) + ' sugg-state'));
+      c.append(head, el('b', null, m.name), el('span', 'sugg-desc', m.desc || ''));
+      if (m.note) c.append(el('span', 'sugg-note', m.note));
+      const foot = [m.version ? `v${m.version}` : '', fmtSize(m.size)].filter(Boolean).join(' · ');
+      if (foot) c.append(el('span', 'sugg-foot', foot));
+      c.title = on ? 'Įdiegtas' : (m.available ? `Įdiegti ${m.name}` : 'Nepasiekiamas');
       c.disabled = on || !m.available || busy.has(m.id);
       c.addEventListener('click', async () => {
         busy.add(m.id);
@@ -211,7 +212,7 @@
       r.append(ic, meta, info, del);
       box.append(r);
     });
-    if (!box.children.length) box.append(el('div', 'mr-empty', 'Shaderių dar nėra - susirask per paiešką dešinėje.'));
+    if (!box.children.length) box.append(el('div', 'mr-empty', 'Shaderių dar nėra - susirask per paiešką viršuje.'));
   }
 
   async function searchShaders() {

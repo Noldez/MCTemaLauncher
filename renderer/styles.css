@@ -695,7 +695,7 @@ body { background: var(--bg); color: var(--ink); font-family: 'Poppins', sans-se
 .np-time { color: var(--faint); font-size: 10px; white-space: nowrap; }
 
 /* ---- mods ---- */
-.modsv { padding: 22px 34px; max-width: 880px; }
+.modsv { padding: 22px 34px; max-width: 1150px; }
 .mods-head { display: flex; align-items: center; gap: 10px; }
 .mods-search { flex: 1; }
 .mods-hbtn { width: 36px; height: 36px; flex-shrink: 0; border: 1px solid var(--line2);
@@ -716,28 +716,37 @@ body { background: var(--bg); color: var(--ink); font-family: 'Poppins', sans-se
 .ms-ic { width: 38px; height: 38px; flex-shrink: 0; border-radius: 10px; border: 1px solid var(--line2);
   display: grid; place-items: center; color: var(--muted); font-size: 15px; }
 .ms-ic.big { width: 44px; height: 44px; font-size: 18px; }
-.sugg-line { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; }
-.sugg-label { flex-shrink: 0; font-size: 11px; font-weight: 700; letter-spacing: 1px;
-  text-transform: uppercase; color: var(--muted); }
+.sugg-label { font-size: 11px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
 .sugg-label i { color: var(--teal); margin-right: 4px; font-size: 10px; }
-.sugg-strip { display: flex; gap: 8px; overflow-x: auto; min-width: 0; }
-.sugg-strip::-webkit-scrollbar { height: 6px; }
-.sugg-strip::-webkit-scrollbar-thumb { background: var(--panel2); border-radius: 6px; }
-.sugg { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; background: #101014;
-  border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px 5px 6px; cursor: pointer;
-  font-family: inherit; color: var(--ink); transition: border-color .15s; }
+.sugg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(164px, 1fr));
+  gap: 10px; margin: 0 0 24px; }
+.sugg { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; text-align: left;
+  background: #101014; border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px;
+  cursor: pointer; font-family: inherit; color: var(--ink); transition: border-color .15s; }
 .sugg:hover:not(:disabled) { border-color: rgba(74,222,128,.5); }
 .sugg:disabled { opacity: .55; cursor: default; }
 .sugg.got { opacity: 1; border-color: rgba(74,222,128,.28); }
-.sugg-txt { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.25; }
-.sugg-note { font-size: 9.5px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase;
-  color: var(--teal); white-space: nowrap; }
-.sugg-ic { width: 22px; height: 22px; border-radius: 50%; overflow: hidden; background: var(--panel2);
-  display: grid; place-items: center; color: var(--muted); font-size: 10px; }
+.sugg-head { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+.sugg-ic { width: 30px; height: 30px; border-radius: 8px; overflow: hidden; background: var(--panel2);
+  display: grid; place-items: center; color: var(--muted); font-size: 12px; }
 .sugg-ic img { width: 100%; height: 100%; object-fit: cover; }
-.sugg b { font-size: 12px; font-weight: 600; }
-.sugg-plus { font-size: 10px; color: var(--teal); }
-.sugg-none { font-size: 11.5px; color: var(--faint); align-self: center; }
+.sugg-state { font-size: 11px; color: var(--teal); }
+.sugg b { font-size: 12.5px; font-weight: 700; line-height: 1.3; }
+.sugg-desc { font-size: 10px; color: var(--faint); line-height: 1.45; min-height: 29px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sugg-note { font-size: 9px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+  color: var(--teal); }
+.sugg-foot { font-size: 9.5px; color: var(--muted); margin-top: auto; }
+.mods-cols { display: grid; grid-template-columns: 1.45fr 1fr; gap: 0 26px; align-items: start; }
+.mods-col { min-width: 0; }
+.mods-col.side { border-left: 1px solid var(--line); padding-left: 26px; }
+.mods-col.side .mr-ic { width: 36px; height: 36px; }
+.mods-col.side .modrow { padding: 11px 13px; gap: 11px; }
+.mods-col.side .mr-meta b { font-size: 13px; }
+.col-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 10px; }
+.col-label i { color: var(--teal); margin-right: 4px; font-size: 10px; }
 .modrow { display: flex; align-items: center; gap: 15px; background: #0e0e11;
   border-radius: 12px; padding: 14px 18px; margin-bottom: 9px; transition: background .15s; }
 .modrow:hover { background: #131318; }
@@ -765,13 +774,7 @@ body { background: var(--bg); color: var(--ink); font-family: 'Poppins', sans-se
 .mr-del:hover:not(:disabled) { background: rgba(153,27,27,.45); }
 .mr-del:disabled { opacity: .4; cursor: default; }
 .mr-empty { padding: 14px 4px; color: var(--faint); font-size: 12px; }
-.shd-head { display: flex; align-items: center; gap: 12px; margin: 26px 0 4px;
-  padding-top: 18px; border-top: 1px solid var(--line); }
-.shd-label { flex-shrink: 0; font-size: 11px; font-weight: 700; letter-spacing: 1px;
-  text-transform: uppercase; color: var(--muted); }
-.shd-label i { color: var(--teal); margin-right: 4px; font-size: 10px; }
-.shd-search { flex: 1; }
-.shd-note { font-size: 10.5px; color: var(--faint); margin: 4px 2px 12px; }
+.shd-note { font-size: 10.5px; color: var(--faint); margin: 7px 2px 14px; }
 .ms-card.drop { cursor: pointer; transition: background .15s; }
 .ms-card.drop:hover, .ms-card.drop.over { background: #14141a; }
 .ms-card.drop.over .ms-plus { border-color: var(--teal); color: var(--teal); }
