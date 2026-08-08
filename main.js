@@ -1321,11 +1321,14 @@ ipcMain.handle('shaders:list', () => {
 
 ipcMain.handle('shaders:search', async (_e, query) => {
   const q = String(query || '').trim().slice(0, 48);
-  if (q.length < 2) return [];
   try {
     const facets = encodeURIComponent('[["versions:1.21.11"],["project_type:shader"],["categories:iris"]]');
-    const r = await fetch(`https://api.modrinth.com/v2/search?query=${encodeURIComponent(q)}&facets=${facets}&limit=8`,
-      { signal: AbortSignal.timeout(10000) });
+    // No query lists the most-downloaded packs instead of nothing, so the
+    // column suggests BSL-class shaders before the player types anything.
+    const url = q.length >= 2
+      ? `https://api.modrinth.com/v2/search?query=${encodeURIComponent(q)}&facets=${facets}&limit=8`
+      : `https://api.modrinth.com/v2/search?facets=${facets}&index=downloads&limit=6`;
+    const r = await fetch(url, { signal: AbortSignal.timeout(10000) });
     if (!r.ok) return [];
     const j = await r.json();
     return (j.hits || []).map((h) => ({

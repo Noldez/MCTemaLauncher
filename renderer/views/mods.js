@@ -208,7 +208,7 @@
       const del = el('button', 'mr-del');
       del.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
       del.title = 'Pašalinti shaderį';
-      del.addEventListener('click', async () => { await window.api.removeShader(p.file); loadShaders(); });
+      del.addEventListener('click', async () => { await window.api.removeShader(p.file); loadShaders(); searchShaders(); });
       r.append(ic, meta, info, del);
       box.append(r);
     });
@@ -217,12 +217,15 @@
 
   async function searchShaders() {
     const box = $('shd-mr');
-    if (sq.length < 2) { box.textContent = ''; return; }
-    const hits = await window.api.searchShaders(sq);
+    const [hits, packs] = await Promise.all([window.api.searchShaders(sq), window.api.listShaders()]);
+    const installed = new Set(packs.map((p) => p.file));
     box.textContent = '';
-    if (!hits.length) return;
-    box.append(el('div', 'mr-src', 'Modrinth shaderiai'));
-    hits.forEach((h) => {
+    // Installed packs already sit in the list above; suggesting them again
+    // would only offer a click that ends in "jau pridėtas".
+    const fresh = hits.filter((h) => !installed.has(`${h.slug}.zip`));
+    if (!fresh.length) return;
+    box.append(el('div', 'mr-src', sq.length >= 2 ? 'Modrinth shaderiai' : 'Populiariausi'));
+    fresh.forEach((h) => {
       const r = el('div', 'modrow');
       const ic = el('span', 'mr-ic');
       if (h.icon) { const img = el('img'); img.src = h.icon; ic.append(img); }
@@ -244,6 +247,7 @@
         }
         if (res.warn) document.dispatchEvent(new CustomEvent('notify', { detail: { text: res.warn, kind: 'error' } }));
         loadShaders();
+        searchShaders();
         load();
       });
       r.append(ic, meta, add);
@@ -258,7 +262,8 @@
   });
   $('shd-folder').addEventListener('click', () => window.api.openShaderFolder());
 
-  document.querySelector('.rail-btn[data-view="mods"]').addEventListener('click', () => { load(); loadShaders(); });
+  document.querySelector('.rail-btn[data-view="mods"]').addEventListener('click', () => { load(); loadShaders(); searchShaders(); });
   load();
   loadShaders();
+  searchShaders();
 })();
