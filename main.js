@@ -798,6 +798,24 @@ ipcMain.handle('shots:openFolder', () => { fs.mkdirSync(shotsDir, { recursive: t
 const skinsDir = path.join(gameDir, 'skins');
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
+// The picked skin also goes to mctema.lt, where the MCTemaSkins plugin has
+// SkinsRestorer put it on the player in-game. Best-effort by design: offline
+// just means the server wears the previous skin until the next pick succeeds,
+// and the local library above stays the source of truth for the UI.
+const uploadCurrentSkin = async () => {
+  try {
+    const c = loadConfig();
+    const s = (c.skins || []).find((x) => x.id === c.currentSkin);
+    if (!s) return;
+    const a = loadAuth();
+    if (!a || !a.token) return;
+    const buf = fs.readFileSync(path.join(skinsDir, `${s.id}.png`));
+    await pinnedUpload('/api/launcher/skin', a.token,
+      { variant: s.variant === 'slim' ? 'slim' : 'classic' },
+      { name: 'skin.png', type: 'image/png', buf });
+  } catch { /* offline is fine; next pick retries */ }
+};
+
 ipcMain.handle('skins:save', (_e, payload) => {
   const r = readPng(payload && payload.dataUrl);
   if (r.error) return { ok: false, error: r.error };
@@ -811,6 +829,7 @@ ipcMain.handle('skins:save', (_e, payload) => {
   const skin = { id, name: String((payload && payload.name) || 'be vardo').slice(0, 24),
     variant: payload && payload.variant === 'slim' ? 'slim' : 'wide', favorite: false, addedAt: Date.now() };
   saveConfig({ ...cfg, skins: [...(cfg.skins || []), skin], currentSkin: id });
+  uploadCurrentSkin();
   return { ok: true, skin };
 });
 ipcMain.handle('skins:list', () => {
@@ -820,7 +839,10 @@ ipcMain.handle('skins:list', () => {
 });
 ipcMain.handle('skins:set', (_e, id) => {
   const c = loadConfig();
-  if ((c.skins || []).some((s) => s.id === id)) saveConfig({ ...c, currentSkin: id });
+  if ((c.skins || []).some((s) => s.id === id)) {
+    saveConfig({ ...c, currentSkin: id });
+    uploadCurrentSkin();
+  }
   return true;
 });
 ipcMain.handle('skins:delete', (_e, id) => {
