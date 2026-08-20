@@ -49,8 +49,8 @@ One click installs Minecraft, Fabric and Java, signs you in and drops you on `pl
 
 **Windows 10 or 11, 64-bit.** Download the installer from [mctema.lt](https://mctema.lt) and run it.
 
-> [!CAUTION]
-> The installer is not code-signed yet ([#5](https://github.com/Noldez/MCTemaLauncher/issues/5)), so SmartScreen may warn on first run. Verify it rather than trusting the prompt - SHA-256 `f4008fa041599eec0f66ce30dbef184cc669358aacd0814f02378172467c1aac`, and [VirusTotal](https://www.virustotal.com/gui/file/f4008fa041599eec0f66ce30dbef184cc669358aacd0814f02378172467c1aac) reports 0/62. Then **More info → Run anyway**.
+> [!NOTE]
+> Since 1.0.4 the installer is code-signed: right-click → Properties → Digital Signatures should say **Open Source Developer Tadas Kazlauskas**, issued by Certum. A fresh certificate has no SmartScreen reputation yet, so the blue prompt may still appear for a while - check the publisher under **More info** before **Run anyway**. The current installer's SHA-256 is published at [mctema.lt/updates/stable-setup.sha256](https://mctema.lt/updates/stable-setup.sha256).
 
 **Linux.** The `.deb` is the recommended route on Debian, Ubuntu, Kali and Mint - no FUSE, normal menu entry:
 
@@ -67,7 +67,7 @@ chmod +x MCTemaLauncher-*.AppImage
 
 Credential storage needs a running secret service. The `.deb` pulls in `libsecret`; without `gnome-keyring` or `kwallet` the launcher says so rather than storing your password unprotected.
 
-Every release ships `SHA256SUMS.txt` and a build provenance attestation: `gh attestation verify MCTemaLauncher-Setup.exe --repo Noldez/MCTemaLauncher`.
+Windows releases are built and Authenticode-signed on our release machine - the certificate's private key lives in Certum's cloud HSM and signs through an operator-present session, so CI never holds it. Verify any installer with `signtool verify /pa MCTemaLauncher-Setup.exe` or the file's Digital Signatures tab.
 
 ## Security
 
@@ -86,7 +86,7 @@ Open source so this can be checked rather than believed. Found something? [SECUR
 | **Abuse** | A modified client hammering the API | Per-account limits on the endpoints that cost us something. The thresholds are not published, for the same reason you do not print the alarm code on the door. |
 | **Telemetry** | Us collecting things you did not agree to | There is none. The one exception is manual: after a crash you can press *Siųsti logą*, and even then the log has your account name and home path stripped out before it leaves. |
 
-**Not covered**, since a list that claims everything is worth nothing. Anyone with administrator access to your machine can read the keystore or patch the launcher, and no client-side control survives that. The installer is unsigned, so you verify by checksum instead. Pinning narrows certificate issuance to two authorities rather than eliminating the risk. And if someone already knows your password, the launcher is not what stops them - change it in game and every session dies with it.
+**Not covered**, since a list that claims everything is worth nothing. Anyone with administrator access to your machine can read the keystore or patch the launcher, and no client-side control survives that. A code signature says who built the file, not that the code is safe - the checksum and the source stay there for anyone who wants to check the rest. Pinning narrows certificate issuance to two authorities rather than eliminating the risk. And if someone already knows your password, the launcher is not what stops them - change it in game and every session dies with it.
 
 ## How it works
 
@@ -108,7 +108,7 @@ Open source so this can be checked rather than believed. Found something? [SECUR
 
 ## Troubleshooting
 
-**Windows warns about the file.** No code signature yet, so fresh builds have no reputation. Verify the checksum above, then *More info → Run anyway*.
+**Windows warns about the file.** The installer is signed (see [Install](#install)), but a young certificate has no SmartScreen reputation until enough people run it. Check that *More info* names **Open Source Developer Tadas Kazlauskas** as the publisher, then *Run anyway*.
 
 **`dlopen(): error loading libfuse.so.2`.** Kali, newer Ubuntu and Arch dropped FUSE 2. Install the `.deb`, or run the AppImage with `--appimage-extract-and-run`.
 
