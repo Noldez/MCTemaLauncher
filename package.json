@@ -56,6 +56,13 @@
     "win": {
       "target": "nsis",
       "icon": "assets/icon.ico",
+      "signtoolOptions": {
+        "certificateSubjectName": "Open Source Developer Tadas Kazlauskas",
+        "rfc3161TimeStampServer": "http://time.certum.pl",
+        "signingHashAlgorithms": [
+          "sha256"
+        ]
+      },
       "extraResources": [
         {
           "from": "assets/jre",
