@@ -39,6 +39,7 @@
       <button class="rail-btn" data-view="relay" title="Pokalbiai"><i class="fa-regular fa-comment"></i></button>
       <button class="rail-btn" data-view="mods" title="Modai"><i class="fa-solid fa-layer-group"></i></button>
       <button class="rail-btn" data-view="gallery" title="Galerija"><i class="fa-solid fa-crop-simple"></i></button>
+      <button class="rail-btn" data-view="topai" title="Topai"><i class="fa-solid fa-ranking-star"></i></button>
       <span class="rail-spacer"></span>
       <button class="rail-btn" data-view="shop" title="Parduotuvė"><i class="fa-solid fa-cart-shopping"></i></button>
       <button class="rail-btn" data-view="settings" title="Nustatymai"><i class="fa-solid fa-gear"></i></button>
@@ -194,6 +195,15 @@
           </aside>
         </div>
         <div id="gal-light" class="lightbox hidden"></div>
+      </section>
+      <section class="view" id="view-topai">
+        <div class="tops">
+          <div class="tops-head">
+            <h2 class="pg-title">TOPAI</h2>
+            <div class="tops-cats" id="tops-cats"></div>
+          </div>
+          <div id="tops-body" class="tops-body"></div>
+        </div>
       </section>
       <section class="view" id="view-locker">
         <div class="locker">
@@ -471,6 +481,7 @@
   <script src="views/locker.js"></script>
   <script src="views/mods.js"></script>
   <script src="views/shop.js"></script>
+  <script src="views/topai.js"></script>
   <script src="crash.js"></script>
   <script src="views/settings.js"></script>
 </body>
