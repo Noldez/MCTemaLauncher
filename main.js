@@ -298,6 +298,8 @@ ipcMain.handle('shop:purchase', (_e, p) => friendsApi('POST', '/api/launcher/sho
   expectedPriceCents: Number(p && p.expectedPriceCents),
 }));
 
+ipcMain.handle('tops:data', () => friendsApi('GET', '/api/launcher/tops'));
+
 ipcMain.handle('chat:inbox', () => friendsApi('GET', '/api/launcher/messages/inbox'));
 ipcMain.handle('chat:history', (_e, p) => {
   const withNick = encodeURIComponent(String((p && p.with) || ''));
