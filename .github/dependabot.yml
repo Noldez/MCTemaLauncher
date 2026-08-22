@@ -9,3 +9,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      # init, analyze and upload-sarif share a version: a PR that bumps only
+      # one of them fails with "Loaded a configuration file for version X, but
+      # running version Y". They have to move together.
+      codeql-action:
+        patterns:
+          - "github/codeql-action*"
