@@ -448,13 +448,15 @@ const resolveJava = () => resolveJavaIn({
   repairDir: gameDir,
 });
 
-// Repair archive for installs that lost their bundled runtime. The pinned hash
-// is the gate - it is checked before anything is unpacked, so serving the feed
-// is not what makes this safe. Windows only: that is where the runtime goes
+// Repair archive for installs that lost their bundled runtime: the Temurin
+// build as Adoptium ships it, still carrying Eclipse's signature rather than
+// the one electron-builder puts on the .exe files it packs. The pinned hash is
+// the gate - it is checked before anything is unpacked, so serving the feed is
+// not what makes this safe. Windows only: that is where the runtime goes
 // missing, and it is the only build whose JRE we publish separately.
 const JRE_REPAIR = {
   url: 'https://mctema.lt/updates/jre-win32-x64-21.0.12.zip',
-  sha256: 'e3594b095591b7b975483722bdb72eb512d8b2e48de624dbb2229d0dc473a6e0',
+  sha256: '915a6b959b3eb014c61a509becb71c07e704c5f3d957def69db9f8d0287d915a',
 };
 
 // Put a runtime back without a 150 MB reinstall. Progress is reported because
