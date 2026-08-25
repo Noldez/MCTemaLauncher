@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const crypto = require('node:crypto');
 const path = require('node:path');
-const { stageMods, resolveJava } = require('../lib/mods');
+const { stageMods } = require('../lib/mods');
 
 const sha = (s) => crypto.createHash('sha256').update(Buffer.from(s)).digest('hex');
 
@@ -106,23 +106,4 @@ test('optional mods are skipped when disabled, missing or altered', () => {
   assert.deepEqual(res.required, ['client.jar']);
 });
 
-test('resolveJava points at the bundled runtime for packaged and dev layouts', () => {
-  const packagedPath = j('/res', 'jre', 'bin', 'java.exe');
-  const devPath = j('/app', 'assets', 'jre', 'bin', 'java');
-
-  assert.equal(
-    resolveJava({ packaged: true, resourcesPath: '/res', appDir: '/app', platform: 'win32', io: fakeIo({ [packagedPath]: 'x' }) }),
-    packagedPath,
-  );
-  assert.equal(
-    resolveJava({ packaged: false, resourcesPath: '/res', appDir: '/app', platform: 'linux', io: fakeIo({ [devPath]: 'x' }) }),
-    devPath,
-  );
-});
-
-test('resolveJava returns undefined when the runtime is absent', () => {
-  assert.equal(
-    resolveJava({ packaged: true, resourcesPath: '/res', appDir: '/app', platform: 'win32', io: fakeIo({}) }),
-    undefined,
-  );
-});
+// Java resolution moved to lib/java.js - see test/java.test.js.

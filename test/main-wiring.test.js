@@ -33,6 +33,14 @@ function libRequires(src) {
   return out.filter((r) => !SKIP.has(r.module));
 }
 
+// The repair download is only as good as the hash it is checked against, and a
+// placeholder would turn the check into a permanent "neatitiko parašo".
+test('main.js pins a real sha256 for the Java repair archive', () => {
+  const m = /JRE_REPAIR = \{[^}]*sha256:\s*'([^']*)'/s.exec(MAIN);
+  assert.ok(m, 'expected a JRE_REPAIR constant with a sha256');
+  assert.match(m[1], /^[a-f0-9]{64}$/);
+});
+
 test('main.js only destructures names its lib modules export', () => {
   const requires = libRequires(MAIN).filter((r) => r.kind === 'named');
   assert.ok(requires.length > 0, 'expected to find destructured lib requires');
