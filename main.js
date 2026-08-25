@@ -13,7 +13,8 @@ const {
 const configStore = require('./lib/config');
 const { createCredentialStore, authErrText } = require('./lib/credentials');
 const { mcStatus } = require('./lib/mc-status');
-const { stageMods, resolveJava: resolveBundledJava, isPlainFileName } = require('./lib/mods');
+const { stageMods, isPlainFileName } = require('./lib/mods');
+const { resolveJava: resolveJavaIn, javaReport, jreZipIsAuthentic, JRE_ZIP_MAX_BYTES } = require('./lib/java');
 const { createRichPresence } = require('./lib/rpc');
 const { initUpdater: startUpdater } = require('./lib/updater');
 const { createToastStack } = require('./lib/toasts');
@@ -437,10 +438,79 @@ const MOD_HASHES = {
   'mctemaclient.jar': 'b1a7d45a9c90a176f49eddae3e7f3c6999e4eadf9c972d979cb1fcab2520c1d0',
 };
 
-const resolveJava = () => resolveBundledJava({
+// The repair copy lives in the game directory rather than beside the app: it
+// is written while the launcher is running, and the install directory is not
+// always writable without a prompt.
+const resolveJava = () => resolveJavaIn({
   packaged: app.isPackaged,
   resourcesPath: process.resourcesPath,
   appDir: __dirname,
+  repairDir: gameDir,
+});
+
+// Repair archive for installs that lost their bundled runtime. The pinned hash
+// is the gate - it is checked before anything is unpacked, so serving the feed
+// is not what makes this safe. Windows only: that is where the runtime goes
+// missing, and it is the only build whose JRE we publish separately.
+const JRE_REPAIR = {
+  url: 'https://mctema.lt/updates/jre-win32-x64-21.0.12.zip',
+  sha256: 'e3594b095591b7b975483722bdb72eb512d8b2e48de624dbb2229d0dc473a6e0',
+};
+
+// Put a runtime back without a 150 MB reinstall. Progress is reported because
+// this is a 45 MB download on a launcher that would otherwise look frozen.
+ipcMain.handle('java:repair', async () => {
+  if (process.platform !== 'win32') {
+    return { ok: false, error: 'Perinstaliuok launcherį iš mctema.lt.' };
+  }
+  const progress = (percent) => {
+    if (win && !win.isDestroyed()) win.webContents.send('java:repair-progress', { percent });
+  };
+
+  let buf;
+  try {
+    const r = await fetch(JRE_REPAIR.url, { redirect: 'error', signal: AbortSignal.timeout(600000) });
+    if (!r.ok || !r.body) return { ok: false, error: 'Nepavyko atsisiųsti Java.' };
+    const total = Number(r.headers.get('content-length')) || 0;
+    const reader = r.body.getReader();
+    const chunks = [];
+    let got = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      got += value.length;
+      // A feed that keeps sending is not going to fill the disk here.
+      if (got > JRE_ZIP_MAX_BYTES) return { ok: false, error: 'Atsiuntimas per didelis.' };
+      chunks.push(Buffer.from(value));
+      if (total) progress(Math.min(99, Math.round((got / total) * 100)));
+    }
+    buf = Buffer.concat(chunks);
+  } catch {
+    return { ok: false, error: 'Nepavyko atsisiųsti Java.' };
+  }
+
+  if (!jreZipIsAuthentic(buf, JRE_REPAIR.sha256)) {
+    return { ok: false, error: 'Atsiųstas failas neatitiko parašo.' };
+  }
+
+  // Unpacked beside the target and swapped in, so a failed extraction cannot
+  // leave a half-written runtime behind for the next launch to trip over.
+  try {
+    ensureDir();
+    const staging = path.join(gameDir, 'jre-new');
+    const dst = path.join(gameDir, 'jre');
+    fs.rmSync(staging, { recursive: true, force: true });
+    new (require('adm-zip'))(buf).extractAllTo(staging, true);
+    fs.rmSync(dst, { recursive: true, force: true });
+    fs.renameSync(staging, dst);
+  } catch {
+    return { ok: false, error: 'Nepavyko išpakuoti Java.' };
+  }
+
+  const found = resolveJava();
+  if (!found.path) return { ok: false, error: 'Java neatsirado ir po taisymo.' };
+  progress(100);
+  return { ok: true };
 });
 
 function bundledModsDir() {
@@ -1476,6 +1546,18 @@ ipcMain.handle('game:play', async (_e, payload) => {
     return { ok: false, error: 'Nepavyko paruosti kliento: ' + String((err && err.message) || err) };
   }
 
+  // mclc launches with `java` from PATH when it is handed no path, and that
+  // fallback is what started the game on a system Java 8: Fabric then refuses
+  // the mods and the screen blames them instead of the missing runtime. So the
+  // launch stops here instead, with the report in the log.
+  const java = resolveJava();
+  for (const line of javaReport(java)) log(line);
+  if (!java.path) {
+    launching = false;
+    send('java:missing', { canRepair: process.platform === 'win32' });
+    return { ok: false, error: 'Trūksta Java 21.' };
+  }
+
   const opts = {
     authorization: {
       access_token: '0',
@@ -1488,7 +1570,7 @@ ipcMain.handle('game:play', async (_e, payload) => {
     root: gameDir,
     version: { number: MC_VERSION, type: 'release', custom: fabricProfile },
     memory: { max: `${ram}G`, min: '1G' },
-    javaPath: resolveJava(),
+    javaPath: java.path,
     // No quickPlay: the game opens on the MC Tema menu rather than dropping
     // straight into the server. That menu now has a singleplayer button too,
     // and joining before it is shown means a player leaving a world lands on

@@ -419,6 +419,21 @@
     </div>
   </div>
 
+  <div id="java-modal" class="crash-modal hidden">
+    <div class="cr-box">
+      <button id="jv-close" class="cr-x" title="Uždaryti"><i class="fa-solid fa-xmark"></i></button>
+      <div class="cr-art"><i class="fa-solid fa-mug-hot"></i></div>
+      <div class="cr-title">Trūksta Java</div>
+      <div class="cr-sub" id="jv-sub">-</div>
+      <button id="jv-fix" class="cr-primary"><i class="fa-solid fa-wrench"></i> Parsisiųsti Java</button>
+      <div class="cr-row">
+        <button id="jv-send"><i class="fa-solid fa-paper-plane"></i> Siųsti logą</button>
+      </div>
+      <div id="jv-sent" class="cr-sent hidden"></div>
+      <div class="cr-foot">Jei nepavyksta - parašyk mums <button class="cr-link" id="jv-discord">Discord</button>.</div>
+    </div>
+  </div>
+
   <div id="login-gate" class="login-gate hidden">
     <div class="lg-left">
       <img src="logo.png" alt="" class="lg-logo">
@@ -472,6 +487,7 @@
   <script src="views/mods.js"></script>
   <script src="views/shop.js"></script>
   <script src="crash.js"></script>
+  <script src="java.js"></script>
   <script src="views/settings.js"></script>
 </body>
 </html>
