@@ -7,7 +7,7 @@ const { Client } = require('./lib/mclc');
 const { offlineUUID } = require('./lib/protocol');
 const {
   postJson: pinnedPostJson,
-  apiRequest: pinnedApi,
+  apiRequest: pinnedApiLive,
   upload: pinnedUpload,
 } = require('./lib/pinned-http');
 const configStore = require('./lib/config');
@@ -19,9 +19,35 @@ const { createRichPresence } = require('./lib/rpc');
 const { initUpdater: startUpdater } = require('./lib/updater');
 const { createToastStack } = require('./lib/toasts');
 const { mapPosts, absolutizeImage } = require('./lib/news');
+const { mapWinners } = require('./lib/winners');
 const { createLogBuffer, suspectCause, redactLog } = require('./lib/crash');
 const { parseDeepLink, linkFromArgv } = require('./lib/deeplink');
 const { autoUpdater } = require('electron-updater');
+
+// A local backend for UI work: `MCTEMA_DEV_API=http://localhost:3101/api npm start`.
+// Honoured only while unpackaged, so a shipped build never reads it, and only
+// for the anonymous JSON calls (news, theme, podium, Discord count), over
+// plain HTTP because there is nothing to pin on localhost. Anything carrying
+// a token keeps going through the pinned client to the real site, so a dev
+// run cannot turn the player's real session into a string of 401s.
+const DEV_API = !app.isPackaged && /^http:\/\/(localhost|127\.0\.0\.1):\d+\/api$/.test(process.env.MCTEMA_DEV_API || '')
+  ? process.env.MCTEMA_DEV_API.slice(0, -'/api'.length)
+  : null;
+async function devApi(method, apiPath, body) {
+  const headers = body ? { 'Content-Type': 'application/json' } : {};
+  try {
+    const res = await fetch(`${DEV_API}${apiPath}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
+    let json = {};
+    try { json = await res.json(); } catch {}
+    return { status: res.status, json };
+  } catch {
+    return { error: 'NETWORK' };
+  }
+}
+const pinnedApi = DEV_API
+  ? (method, apiPath, body, token) =>
+      token ? pinnedApiLive(method, apiPath, body, token) : devApi(method, apiPath, body)
+  : pinnedApiLive;
 
 // Software WebGL fallback for GPU-less machines (VMs, blocklisted drivers);
 // only used when hardware WebGL fails, renderer loads local UI only.
@@ -435,7 +461,7 @@ ipcMain.handle('chat:sendImage', async (_e, p) => {
 
 const MOD_HASHES = {
   'fabric-api.jar': 'bdff7fd7e220085cfad2ff9b1f40dde6534ae0b96cf378f97a374bc54cb9ed0f',
-  'mctemaclient.jar': 'b1a7d45a9c90a176f49eddae3e7f3c6999e4eadf9c972d979cb1fcab2520c1d0',
+  'mctemaclient.jar': '1321825cda11fd428b43cfdd9730ac9f3916a5eaaf64618c0a21d93e702523a3',
 };
 
 // The repair copy lives in the game directory rather than beside the app: it
@@ -1052,6 +1078,14 @@ ipcMain.handle('news:list', async () => {
   const r = await pinnedApi('GET', '/api/posts', null, null);
   if (r.error || r.status !== 200 || !Array.isArray(r.json)) return { ok: false };
   return { ok: true, posts: mapPosts(r.json) };
+});
+
+// The latest contest's podium for the home screen. Offline, or with no decided
+// contest, the strip simply stays hidden.
+ipcMain.handle('contests:winners', async () => {
+  const r = await pinnedApi('GET', '/api/contests/winners', null, null);
+  if (r.error || r.status !== 200 || !r.json) return { ok: false };
+  return { ok: true, podium: mapWinners(r.json, DEV_API ? [DEV_API] : []) };
 });
 
 const SITE_API = 'https://mctema.lt/api';

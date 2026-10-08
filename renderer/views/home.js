@@ -139,6 +139,42 @@
   tickNews();
   setInterval(tickNews, 30000);
 
+  // The latest contest's podium from mctema.lt. The strip stays hidden until
+  // it arrives, so an offline launcher shows nothing rather than an empty row.
+  (async () => {
+    let r;
+    try { r = await window.api.contestWinners(); } catch { return; }
+    if (!r || !r.ok || !r.podium) return;
+    const { el } = window.ui;
+    const PLACE = ['', 'Nugalėtojas', 'Antra vieta', 'Trečia vieta'];
+    const balsai = (n) => {
+      const d = n % 10, dd = n % 100;
+      if (d === 1 && dd !== 11) return 'balsas';
+      if (d >= 2 && !(dd >= 12 && dd <= 19)) return 'balsai';
+      return 'balsų';
+    };
+    const row = $('winners-row');
+    row.textContent = '';
+    r.podium.winners.forEach((w) => {
+      const card = el('button', `win-card p${w.place}`);
+      card.title = `${w.title} - ${PLACE[w.place]}`;
+      if (w.thumbUrl) card.style.backgroundImage = `url("${w.thumbUrl}")`;
+      const box = el('div', 'wc-content');
+      box.append(el('div', 'wc-place', PLACE[w.place]), el('div', 'wc-title', w.title));
+      const by = el('div', 'wc-by');
+      const head = el('img');
+      head.src = `https://mc-heads.net/head/${encodeURIComponent(w.nick)}/32`;
+      head.alt = '';
+      by.append(head, el('span', null, w.nick), el('i', null, `${w.votes} ${balsai(w.votes)}`));
+      box.append(by);
+      card.append(el('span', 'wc-num', String(w.place).padStart(2, '0')), box);
+      card.addEventListener('click', () => window.ui.openUrl(r.podium.url));
+      row.append(card);
+    });
+    $('winners-label').classList.remove('hidden');
+    row.classList.remove('hidden');
+  })();
+
   // Real news from mctema.lt. On any failure the bundled static cards stay -
   // the launcher must look fine fully offline.
   (async () => {

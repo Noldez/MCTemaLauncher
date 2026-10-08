@@ -43,6 +43,7 @@ contextBridge.exposeInMainWorld('api', {
   openShaderFolder: () => ipcRenderer.invoke('shaders:folder'),
   discordStatus: () => ipcRenderer.invoke('discord:status'),
   newsList: () => ipcRenderer.invoke('news:list'),
+  contestWinners: () => ipcRenderer.invoke('contests:winners'),
   submitShot: (p) => ipcRenderer.invoke('gallery:submit', p),
   featuredGallery: () => ipcRenderer.invoke('gallery:featured'),
   voteShot: (p) => ipcRenderer.invoke('gallery:vote', p),
