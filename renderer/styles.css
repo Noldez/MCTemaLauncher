@@ -590,8 +590,12 @@ body { background: var(--bg); color: var(--ink); font-family: 'Poppins', sans-se
 .cape-ely.yes { color: var(--green); }
 .cape-ely:not(.yes)::after { content: ''; position: absolute; left: 2px; right: 2px; top: 50%;
   height: 1px; background: #9ca3af; transform: rotate(-45deg); }
+/* Prize capes: one row of their own above the catalogue. */
+.lk-prize { grid-template-rows: auto; margin-bottom: 26px; }
+.lk-prize-sub { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--faint); }
+.lk-prize-sub i { font-size: 11px; color: #ffc44d; }
 /* Podium capes: a trophy in the place's metal. Locked ones are dimmed under a
-   lock and stay in the row, so everyone sees what a win gets you. */
+   lock and stay on show, so everyone sees what a win gets you. */
 .cape-podium { position: absolute; left: 5px; top: 5px; display: grid; place-items: center;
   width: 17px; height: 17px; border-radius: 5px; font-size: 8px; background: rgba(0,0,0,.65); color: #ffc44d; }
 .cape-podium.p2 { color: #e2e8f0; }

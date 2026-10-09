@@ -74,7 +74,7 @@
     wings.innerHTML = '<i class="fa-solid fa-feather-pointed"></i>';
     t.append(wings);
 
-    // Podium capes wear the place's trophy, and stay in the row locked for
+    // Podium capes wear the place's trophy, and stay on show locked for
     // everyone else: a cape you cannot have is the best ad for the contest.
     if (c.podium) {
       const cup = el('span', `cape-podium p${c.podium}`);
@@ -111,14 +111,19 @@
     none.addEventListener('click', async () => { await window.api.setCape(null); loadCapes(); });
     row.append(none);
 
-    capeData.capes.forEach((c) => row.append(capeTile(c)));
+    capeData.capes.filter((c) => !c.podium).forEach((c) => row.append(capeTile(c)));
+
+    // Prize capes are won, not picked, so they live in their own row.
+    const prize = $('lk-prize-capes');
+    prize.textContent = '';
+    capeData.capes.filter((c) => c.podium).forEach((c) => prize.append(capeTile(c)));
     startCapeAnimation();
   }
 
   /** One interval steps every animated tile, rather than a timer per tile. */
   function startCapeAnimation() {
     if (capeTimer) clearInterval(capeTimer);
-    const tiles = [...$('lk-capes').querySelectorAll('.cape[data-fps]')]
+    const tiles = [...document.querySelectorAll('#lk-prize-capes .cape[data-fps], #lk-capes .cape[data-fps]')]
       .filter((t) => Number(t.dataset.fps) > 0);
     if (!tiles.length) { capeTimer = null; return; }
     let tick = 0;
