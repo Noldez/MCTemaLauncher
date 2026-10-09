@@ -462,7 +462,7 @@ ipcMain.handle('chat:sendImage', async (_e, p) => {
 
 const MOD_HASHES = {
   'fabric-api.jar': 'bdff7fd7e220085cfad2ff9b1f40dde6534ae0b96cf378f97a374bc54cb9ed0f',
-  'mctemaclient.jar': '1321825cda11fd428b43cfdd9730ac9f3916a5eaaf64618c0a21d93e702523a3',
+  'mctemaclient.jar': 'df5fb138a5700f18e5824bb5711a5006651f4647f85632bd107e66a03cd1c352',
 };
 
 // The repair copy lives in the game directory rather than beside the app: it
