@@ -1,5 +1,29 @@
 [
   {
+    "file": "podium-1.png",
+    "name": "Konkurso nugalėtojas",
+    "frames": 8,
+    "fps": 10,
+    "elytra": true,
+    "podium": 1
+  },
+  {
+    "file": "podium-2.png",
+    "name": "Konkurso II vieta",
+    "frames": 12,
+    "fps": 10,
+    "elytra": true,
+    "podium": 2
+  },
+  {
+    "file": "podium-3.png",
+    "name": "Konkurso III vieta",
+    "frames": 12,
+    "fps": 8,
+    "elytra": false,
+    "podium": 3
+  },
+  {
     "file": "4th-hokage-cloak.png",
     "name": "4th Hokage Cloak",
     "frames": 1,

@@ -60,7 +60,7 @@
 
   /** A tile is the cape art plus its name, so the row reads as a list. */
   function capeTile(c) {
-    const cell = el('div', 'cape-cell' + (c.id === capeData.current ? ' on' : ''));
+    const cell = el('div', 'cape-cell' + (c.id === capeData.current ? ' on' : '') + (c.locked ? ' locked' : ''));
     const t = el('div', 'cape');
     t.style.backgroundImage = `url("${c.url}")`;
     t.dataset.frames = String(c.frames || 1);
@@ -74,7 +74,24 @@
     wings.innerHTML = '<i class="fa-solid fa-feather-pointed"></i>';
     t.append(wings);
 
+    // Podium capes wear the place's trophy, and stay in the row locked for
+    // everyone else: a cape you cannot have is the best ad for the contest.
+    if (c.podium) {
+      const cup = el('span', `cape-podium p${c.podium}`);
+      cup.innerHTML = '<i class="fa-solid fa-trophy"></i>';
+      t.append(cup);
+    }
+    if (c.locked) {
+      const lock = el('span', 'cape-lock');
+      lock.innerHTML = '<i class="fa-solid fa-lock"></i>';
+      t.append(lock);
+    }
+
     cell.append(t, el('span', 'cape-name', c.name));
+    if (c.locked) {
+      cell.title = `${c.name} - tik konkurso laimėtojams`;
+      return cell;
+    }
     cell.title = c.elytra
       ? `${c.name} - turi savo elytra tekstūrą`
       : `${c.name} - elytra liks įprastas`;
