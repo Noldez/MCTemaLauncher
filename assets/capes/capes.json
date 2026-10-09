@@ -18,9 +18,9 @@
   {
     "file": "podium-3.png",
     "name": "Konkurso III vieta",
-    "frames": 12,
+    "frames": 5,
     "fps": 8,
-    "elytra": false,
+    "elytra": true,
     "podium": 3
   },
   {
