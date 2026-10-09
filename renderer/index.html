@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <!-- frame-src is the only place remote content may run, and only these
        players, only after the player clicks play. Everything else stays 'self'. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; img-src 'self' data: file: https://mc-heads.net https://mctema.lt https://cdn.modrinth.com; script-src 'self'; font-src 'self'; frame-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; img-src 'self' data: file: https://mc-heads.net https://mctema.lt https://klipai.mctema.lt https://cdn.modrinth.com; script-src 'self'; font-src 'self'; frame-src 'none'">
   <title>MC Tema Launcher</title>
   <link rel="stylesheet" href="fa/css/all.min.css">
   <link rel="stylesheet" href="styles.css">
@@ -48,6 +48,12 @@
       <section class="view active" id="view-home">
         <div class="home-grid">
           <div class="home-main">
+            <!-- Latest contest podium, a bar across the top of the home view;
+                 filled from mctema.lt and hidden until it arrives. -->
+            <div class="winners hidden" id="winners-bar">
+              <div class="win-label"><span><i class="fa-solid fa-trophy"></i> KONKURSO</span><span>NUGALĖTOJAI</span><small id="winners-title"></small></div>
+              <div class="win-list" id="winners-row"></div>
+            </div>
             <div class="hero">
               <div class="hero-art"></div>
               <canvas id="hero-fx" class="hero-fx"></canvas>
@@ -218,6 +224,13 @@
               <div id="lk-skins" class="lk-row"></div>
             </div>
           </div>
+          <!-- Prize capes: won in contests and tournaments, never picked, so
+               they get their own row rather than a slot in the catalogue. -->
+          <div class="sect-head">
+            <div class="sect-label">PRIZINIAI CAPE'AI</div>
+            <span class="lk-prize-sub"><i class="fa-solid fa-trophy"></i> Konkursų ir turnyrų laimėtojams</span>
+          </div>
+          <div id="lk-prize-capes" class="lk-capes lk-prize"></div>
           <div class="sect-head">
             <div class="sect-label">CAPES</div>
             <div class="sect-nav"><button id="lk-cape-prev" title="Atgal"><i class="fa-solid fa-chevron-left"></i></button><button id="lk-cape-next" title="Pirmyn"><i class="fa-solid fa-chevron-right"></i></button></div>

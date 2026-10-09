@@ -60,7 +60,7 @@
 
   /** A tile is the cape art plus its name, so the row reads as a list. */
   function capeTile(c) {
-    const cell = el('div', 'cape-cell' + (c.id === capeData.current ? ' on' : ''));
+    const cell = el('div', 'cape-cell' + (c.id === capeData.current ? ' on' : '') + (c.locked ? ' locked' : ''));
     const t = el('div', 'cape');
     t.style.backgroundImage = `url("${c.url}")`;
     t.dataset.frames = String(c.frames || 1);
@@ -74,7 +74,24 @@
     wings.innerHTML = '<i class="fa-solid fa-feather-pointed"></i>';
     t.append(wings);
 
+    // Podium capes wear the place's trophy, and stay on show locked for
+    // everyone else: a cape you cannot have is the best ad for the contest.
+    if (c.podium) {
+      const cup = el('span', `cape-podium p${c.podium}`);
+      cup.innerHTML = '<i class="fa-solid fa-trophy"></i>';
+      t.append(cup);
+    }
+    if (c.locked) {
+      const lock = el('span', 'cape-lock');
+      lock.innerHTML = '<i class="fa-solid fa-lock"></i>';
+      t.append(lock);
+    }
+
     cell.append(t, el('span', 'cape-name', c.name));
+    if (c.locked) {
+      cell.title = `${c.name} - tik konkurso laimėtojams`;
+      return cell;
+    }
     cell.title = c.elytra
       ? `${c.name} - turi savo elytra tekstūrą`
       : `${c.name} - elytra liks įprastas`;
@@ -94,14 +111,19 @@
     none.addEventListener('click', async () => { await window.api.setCape(null); loadCapes(); });
     row.append(none);
 
-    capeData.capes.forEach((c) => row.append(capeTile(c)));
+    capeData.capes.filter((c) => !c.podium).forEach((c) => row.append(capeTile(c)));
+
+    // Prize capes are won, not picked, so they live in their own row.
+    const prize = $('lk-prize-capes');
+    prize.textContent = '';
+    capeData.capes.filter((c) => c.podium).forEach((c) => prize.append(capeTile(c)));
     startCapeAnimation();
   }
 
   /** One interval steps every animated tile, rather than a timer per tile. */
   function startCapeAnimation() {
     if (capeTimer) clearInterval(capeTimer);
-    const tiles = [...$('lk-capes').querySelectorAll('.cape[data-fps]')]
+    const tiles = [...document.querySelectorAll('#lk-prize-capes .cape[data-fps], #lk-capes .cape[data-fps]')]
       .filter((t) => Number(t.dataset.fps) > 0);
     if (!tiles.length) { capeTimer = null; return; }
     let tick = 0;

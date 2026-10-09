@@ -7,7 +7,7 @@ const { Client } = require('./lib/mclc');
 const { offlineUUID } = require('./lib/protocol');
 const {
   postJson: pinnedPostJson,
-  apiRequest: pinnedApi,
+  apiRequest: pinnedApiLive,
   upload: pinnedUpload,
 } = require('./lib/pinned-http');
 const configStore = require('./lib/config');
@@ -19,9 +19,36 @@ const { createRichPresence } = require('./lib/rpc');
 const { initUpdater: startUpdater } = require('./lib/updater');
 const { createToastStack } = require('./lib/toasts');
 const { mapPosts, absolutizeImage } = require('./lib/news');
+const { mapWinners } = require('./lib/winners');
+const { unlockCapes, placesOf } = require('./lib/podium-capes');
 const { createLogBuffer, suspectCause, redactLog } = require('./lib/crash');
 const { parseDeepLink, linkFromArgv } = require('./lib/deeplink');
 const { autoUpdater } = require('electron-updater');
+
+// A local backend for UI work: `MCTEMA_DEV_API=http://localhost:3101/api npm start`.
+// Honoured only while unpackaged, so a shipped build never reads it, and only
+// for the anonymous JSON calls (news, theme, podium, Discord count), over
+// plain HTTP because there is nothing to pin on localhost. Anything carrying
+// a token keeps going through the pinned client to the real site, so a dev
+// run cannot turn the player's real session into a string of 401s.
+const DEV_API = !app.isPackaged && /^http:\/\/(localhost|127\.0\.0\.1):\d+\/api$/.test(process.env.MCTEMA_DEV_API || '')
+  ? process.env.MCTEMA_DEV_API.slice(0, -'/api'.length)
+  : null;
+async function devApi(method, apiPath, body) {
+  const headers = body ? { 'Content-Type': 'application/json' } : {};
+  try {
+    const res = await fetch(`${DEV_API}${apiPath}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
+    let json = {};
+    try { json = await res.json(); } catch {}
+    return { status: res.status, json };
+  } catch {
+    return { error: 'NETWORK' };
+  }
+}
+const pinnedApi = DEV_API
+  ? (method, apiPath, body, token) =>
+      token ? pinnedApiLive(method, apiPath, body, token) : devApi(method, apiPath, body)
+  : pinnedApiLive;
 
 // Software WebGL fallback for GPU-less machines (VMs, blocklisted drivers);
 // only used when hardware WebGL fails, renderer loads local UI only.
@@ -435,7 +462,7 @@ ipcMain.handle('chat:sendImage', async (_e, p) => {
 
 const MOD_HASHES = {
   'fabric-api.jar': 'bdff7fd7e220085cfad2ff9b1f40dde6534ae0b96cf378f97a374bc54cb9ed0f',
-  'mctemaclient.jar': 'b1a7d45a9c90a176f49eddae3e7f3c6999e4eadf9c972d979cb1fcab2520c1d0',
+  'mctemaclient.jar': '1321825cda11fd428b43cfdd9730ac9f3916a5eaaf64618c0a21d93e702523a3',
 };
 
 // The repair copy lives in the game directory rather than beside the app: it
@@ -547,6 +574,10 @@ function ensureMods() {
   // or a cleared game folder would otherwise leave the config naming a cape
   // whose file is no longer there.
   publishCape(loadConfig().currentCape);
+  // And see whether the signed-in player has just won something: a fresh
+  // podium cape goes on by itself when nothing is worn, and a podium cape
+  // left behind by another account on this install comes off.
+  capesForPlayer().catch(() => {});
 }
 
 const presence = createRichPresence({ clientId: DISCORD_CLIENT_ID, defaultState: SERVER.host });
@@ -965,6 +996,8 @@ function readBuiltinCapes() {
         // Whether the sheet paints its elytra half. Capes that do not leave
         // you with a plain elytra rather than their own.
         elytra: !!c.elytra,
+        // 1..3 for the capes reserved for the latest contest's podium.
+        podium: Number(c.podium) || 0,
         url: pathToFileURL(path.join(builtinCapesDir, c.file)).href,
       }));
   } catch {
@@ -973,10 +1006,36 @@ function readBuiltinCapes() {
   return builtinCapes;
 }
 
-ipcMain.handle('capes:list', () => ({
-  current: loadConfig().currentCape || null,
-  capes: readBuiltinCapes(),
-}));
+/**
+ * The catalogue as this player may use it: podium capes come back locked
+ * unless the signed-in nick holds that place on the latest podium or earned
+ * it before. The first time a cape is earned while nothing is worn it is put
+ * on right away, so a winner sees it on their character without hunting for
+ * it; and a locked cape that is somehow the current one (another account on
+ * the same install) comes off.
+ */
+async function capesForPlayer() {
+  const a = loadAuth();
+  const nick = a ? a.username : '';
+  let placeOf = {};
+  try { placeOf = placesOf(await fetchPodium()); } catch {}
+  const cfg = loadConfig();
+  const r = unlockCapes(readBuiltinCapes(), { nick, placeOf, earned: cfg.earnedCapes });
+  const worn = r.capes.find((c) => c.id === cfg.currentCape);
+  let wear = cfg.currentCape;
+  if (worn && worn.locked) wear = null;
+  if (r.newlyEarned.length && !wear) wear = r.newlyEarned[0];
+  if (r.newlyEarned.length || wear !== cfg.currentCape) {
+    saveConfig({ ...cfg, earnedCapes: r.earned, currentCape: wear });
+    if (wear !== cfg.currentCape) publishCape(wear);
+  }
+  return r.capes;
+}
+
+ipcMain.handle('capes:list', async () => {
+  const capes = await capesForPlayer();
+  return { current: loadConfig().currentCape || null, capes };
+});
 
 // Where the client mod looks for the cape you picked. The launcher owns this
 // folder and rewrites it on every change; the mod only ever reads it, so the
@@ -1014,18 +1073,18 @@ function publishCape(id) {
   }
 }
 
-// null is a real choice here: it means "no cape".
-ipcMain.handle('capes:set', (_e, id) => {
-  const c = loadConfig();
+// null is a real choice here: it means "no cape". A locked podium cape is
+// refused: the locker never offers it, so this only guards the bridge.
+ipcMain.handle('capes:set', async (_e, id) => {
   if (id === null) {
-    saveConfig({ ...c, currentCape: null });
+    saveConfig({ ...loadConfig(), currentCape: null });
     publishCape(null);
     return true;
   }
-  if (readBuiltinCapes().some((x) => x.id === id)) {
-    saveConfig({ ...c, currentCape: id });
-    publishCape(id);
-  }
+  const cape = (await capesForPlayer()).find((x) => x.id === id);
+  if (!cape || cape.locked) return false;
+  saveConfig({ ...loadConfig(), currentCape: id });
+  publishCape(id);
   return true;
 });
 
@@ -1052,6 +1111,25 @@ ipcMain.handle('news:list', async () => {
   const r = await pinnedApi('GET', '/api/posts', null, null);
   if (r.error || r.status !== 200 || !Array.isArray(r.json)) return { ok: false };
   return { ok: true, posts: mapPosts(r.json) };
+});
+
+// The latest contest's podium, for the home screen and the podium capes.
+// Cached for a few minutes: the home view, the locker and the start-up cape
+// check all ask, and a decided podium changes once a month at most. A failed
+// fetch hands back whatever was cached, so a blip never hides the bar.
+let podiumCache = { at: 0, podium: null };
+async function fetchPodium() {
+  if (Date.now() - podiumCache.at < 5 * 60 * 1000) return podiumCache.podium;
+  const r = await pinnedApi('GET', '/api/contests/winners', null, null);
+  if (r.error || r.status !== 200 || !r.json) return podiumCache.podium;
+  podiumCache = { at: Date.now(), podium: mapWinners(r.json, DEV_API ? [DEV_API] : []) };
+  return podiumCache.podium;
+}
+
+// Offline, or with no decided contest, the home strip simply stays hidden.
+ipcMain.handle('contests:winners', async () => {
+  const podium = await fetchPodium();
+  return podium ? { ok: true, podium } : { ok: false };
 });
 
 const SITE_API = 'https://mctema.lt/api';

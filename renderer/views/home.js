@@ -139,6 +139,45 @@
   tickNews();
   setInterval(tickNews, 30000);
 
+  // The latest contest's podium from mctema.lt: a bar across the top of the
+  // view, each place a poster with the author's skin standing in front of it.
+  // Hidden until the data arrives, so an offline launcher shows nothing
+  // rather than an empty bar.
+  (async () => {
+    let r;
+    try { r = await window.api.contestWinners(); } catch { return; }
+    if (!r || !r.ok || !r.podium) return;
+    const { el } = window.ui;
+    const PLACE = ['', 'Nugalėtojas', 'Antra vieta', 'Trečia vieta'];
+    const balsai = (n) => {
+      const d = n % 10, dd = n % 100;
+      if (d === 1 && dd !== 11) return 'balsas';
+      if (d >= 2 && !(dd >= 12 && dd <= 19)) return 'balsai';
+      return 'balsų';
+    };
+    const row = $('winners-row');
+    row.textContent = '';
+    r.podium.winners.forEach((w) => {
+      const card = el('button', `win-card p${w.place}`);
+      card.title = `${PLACE[w.place]}: ${w.title} - ${w.nick}`;
+      const thumb = el('span', 'wc-thumb');
+      if (w.thumbUrl) thumb.style.backgroundImage = `url("${w.thumbUrl}")`;
+      thumb.append(el('b', 'wc-num', String(w.place).padStart(2, '0')));
+      const skin = el('img', 'wc-skin');
+      skin.src = `https://mc-heads.net/body/${encodeURIComponent(w.nick)}/64`;
+      skin.alt = '';
+      const text = el('div', 'wc-text');
+      const by = el('div', 'wc-by');
+      by.append(el('span', 'wc-nick', w.nick), el('i', null, `${w.votes} ${balsai(w.votes)}`));
+      text.append(el('div', 'wc-title', w.title), by);
+      card.append(thumb, skin, text);
+      card.addEventListener('click', () => window.ui.openUrl(r.podium.url));
+      row.append(card);
+    });
+    $('winners-title').textContent = r.podium.title;
+    $('winners-bar').classList.remove('hidden');
+  })();
+
   // Real news from mctema.lt. On any failure the bundled static cards stay -
   // the launcher must look fine fully offline.
   (async () => {
