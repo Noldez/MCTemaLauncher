@@ -139,8 +139,10 @@
   tickNews();
   setInterval(tickNews, 30000);
 
-  // The latest contest's podium from mctema.lt. The strip stays hidden until
-  // it arrives, so an offline launcher shows nothing rather than an empty row.
+  // The latest contest's podium from mctema.lt: a bar across the top of the
+  // view, each place a poster with the author's skin standing in front of it.
+  // Hidden until the data arrives, so an offline launcher shows nothing
+  // rather than an empty bar.
   (async () => {
     let r;
     try { r = await window.api.contestWinners(); } catch { return; }
@@ -157,22 +159,23 @@
     row.textContent = '';
     r.podium.winners.forEach((w) => {
       const card = el('button', `win-card p${w.place}`);
-      card.title = `${w.title} - ${PLACE[w.place]}`;
-      if (w.thumbUrl) card.style.backgroundImage = `url("${w.thumbUrl}")`;
-      const box = el('div', 'wc-content');
-      box.append(el('div', 'wc-place', PLACE[w.place]), el('div', 'wc-title', w.title));
+      card.title = `${PLACE[w.place]}: ${w.title} - ${w.nick}`;
+      const thumb = el('span', 'wc-thumb');
+      if (w.thumbUrl) thumb.style.backgroundImage = `url("${w.thumbUrl}")`;
+      thumb.append(el('b', 'wc-num', String(w.place).padStart(2, '0')));
+      const skin = el('img', 'wc-skin');
+      skin.src = `https://mc-heads.net/body/${encodeURIComponent(w.nick)}/64`;
+      skin.alt = '';
+      const text = el('div', 'wc-text');
       const by = el('div', 'wc-by');
-      const head = el('img');
-      head.src = `https://mc-heads.net/head/${encodeURIComponent(w.nick)}/32`;
-      head.alt = '';
-      by.append(head, el('span', null, w.nick), el('i', null, `${w.votes} ${balsai(w.votes)}`));
-      box.append(by);
-      card.append(el('span', 'wc-num', String(w.place).padStart(2, '0')), box);
+      by.append(el('span', 'wc-nick', w.nick), el('i', null, `${w.votes} ${balsai(w.votes)}`));
+      text.append(el('div', 'wc-title', w.title), by);
+      card.append(thumb, skin, text);
       card.addEventListener('click', () => window.ui.openUrl(r.podium.url));
       row.append(card);
     });
-    $('winners-label').classList.remove('hidden');
-    row.classList.remove('hidden');
+    $('winners-title').textContent = r.podium.title;
+    $('winners-bar').classList.remove('hidden');
   })();
 
   // Real news from mctema.lt. On any failure the bundled static cards stay -
