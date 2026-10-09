@@ -39,11 +39,19 @@ test('signed out, nothing on the podium opens', () => {
   assert.deepEqual(r.newlyEarned, []);
 });
 
-test('the place holder gets exactly their cape, case-insensitively, and it is remembered', () => {
-  const r = unlockCapes(catalogue(), { nick: 'SENDISZ', placeOf: placesOf(podium), earned: {} });
-  assert.deepEqual(r.capes.map((c) => c.locked), [true, false, true, false]);
-  assert.deepEqual(r.newlyEarned, ['podium-2.png']);
-  assert.deepEqual(r.earned, { sendisz: ['podium-2.png'] });
+test('a place opens its own cape and every one below it, case-insensitively, and is remembered', () => {
+  const second = unlockCapes(catalogue(), { nick: 'SENDISZ', placeOf: placesOf(podium), earned: {} });
+  assert.deepEqual(second.capes.map((c) => c.locked), [true, false, false, false]);
+  assert.deepEqual(second.newlyEarned, ['podium-2.png', 'podium-3.png'], 'best place first');
+  assert.deepEqual(second.earned, { sendisz: ['podium-2.png', 'podium-3.png'] });
+
+  const first = unlockCapes(catalogue(), { nick: 'Noldez', placeOf: placesOf(podium), earned: {} });
+  assert.deepEqual(first.capes.map((c) => c.locked), [false, false, false, false]);
+  assert.deepEqual(first.newlyEarned, ['podium-1.png', 'podium-2.png', 'podium-3.png']);
+
+  const third = unlockCapes(catalogue(), { nick: 'ZooH_', placeOf: placesOf(podium), earned: {} });
+  assert.deepEqual(third.capes.map((c) => c.locked), [true, true, false, false]);
+  assert.deepEqual(third.newlyEarned, ['podium-3.png']);
 });
 
 test('an earned cape stays open after the podium moves on', () => {
@@ -69,7 +77,7 @@ test('offline, with no podium, memory still opens what was earned', () => {
 
 test('other nicks in the memory are left alone', () => {
   const earned = { sendisz: ['podium-2.png'] };
-  const r = unlockCapes(catalogue(), { nick: 'Noldez', placeOf: placesOf(podium), earned });
-  assert.deepEqual(r.earned, { sendisz: ['podium-2.png'], noldez: ['podium-1.png'] });
+  const r = unlockCapes(catalogue(), { nick: 'ZooH_', placeOf: placesOf(podium), earned });
+  assert.deepEqual(r.earned, { sendisz: ['podium-2.png'], zooh_: ['podium-3.png'] });
   assert.deepEqual(earned, { sendisz: ['podium-2.png'] }, 'input is not mutated');
 });
